@@ -1,30 +1,36 @@
+-------Tabla Cliente
 CREATE TABLE Cliente (
-    Cedula VARCHAR(20) NOT NULL PRIMARY KEY,
-    Nombre VARCHAR(40) NOT NULL,
-    Apellido1 VARCHAR(30) NOT NULL,
-    Apellido2 VARCHAR(30) NOT NULL,
-    Telefono VARCHAR(20) NOT NULL
-);
+    identificacion INT PRIMARY KEY,
+    nombre VARCHAR(30) NOT NULL,
+    apellido1 VARCHAR(30) NOT NULL,
+    apellido2 VARCHAR(30) NULL,
+    telefono VARCHAR(30) NOT NULL,
+    estado BIT NOT NULL DEFAULT 1
+)
 GO
---  TABLA CLIENTES
 
+
+
+
+
+
+
+
+
+-- TABLA CLIENTES
 -- TIPOS Y ROLES
-
 CREATE TABLE Tipo_Inmbueble(
     Id_TipoInmueble INT IDENTITY(1,1) PRIMARY KEY,
     Nombre_Inmueble VARCHAR(50) NOT NULL
 );
 GO
 --  TABLA INMUEBLES
-
 CREATE TABLE TIpo_RolUsuario(
     Id_RolUsuario INT IDENTITY(1,1) PRIMARY KEY,
     Nombre_rol VARCHAR(30) NOT NULL
 );
 GO
-
 -- TIPOS Y ROLES
-
 CREATE TABLE Propiedad (
     Id_propiedad INT IDENTITY(1,1) PRIMARY KEY,
     Ubicacion VARCHAR(255) NOT NULL,
