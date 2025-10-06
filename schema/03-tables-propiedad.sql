@@ -33,9 +33,8 @@ GO
 -- Foreign keys
 ALTER TABLE Propiedad
 ADD CONSTRAINT FK_Propiedad_EstadoPropiedad 
-FOREIGN KEY (idEstado) REFERENCES EstadoPropiedad(idEstado);
+FOREIGN KEY (idEstado) REFERENCES EstadoPropiedad(idEstadoPropiedad);
 GO
-
 
 ALTER TABLE Propiedad
 ADD CONSTRAINT FK_Propiedad_TipoInmueble 
