@@ -13,11 +13,29 @@ CREATE TABLE Propiedad (
 ) ON Propiedades
 GO
 
+
+-- TABLA ESTADO PROPIEDAD
+CREATE TABLE EstadoPropiedad (
+    idEstadoPropiedad INT IDENTITY(1,1) PRIMARY KEY,
+    nombre VARCHAR(30) NOT NULL
+)
+GO
+
+-- TABLA TIPO INMUEBLE
+CREATE TABLE TipoInmueble (
+    idTipoInmueble INT IDENTITY(1,1) PRIMARY KEY,
+    nombre VARCHAR(30) NOT NULL
+)
+GO
+
+-- agregamos validaciones
+
 -- Foreign keys
 ALTER TABLE Propiedad
 ADD CONSTRAINT FK_Propiedad_EstadoPropiedad 
 FOREIGN KEY (idEstado) REFERENCES EstadoPropiedad(idEstado);
 GO
+
 
 ALTER TABLE Propiedad
 ADD CONSTRAINT FK_Propiedad_TipoInmueble 
