@@ -1,0 +1,13 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\functions",
+    "\\maintenance",
+    "\\schema",
+    "\\stored procedures",
+    "\\triggers",
+    "\\views"
+  ],
+  "SelectedNode": "\\functions\\fn.sql",
+  "PreviewInSolutionExplorer": false
+}

@@ -10,12 +10,9 @@ CREATE TABLE Propiedad (
     idEstado INT NOT NULL,
     idTipoInmueble INT NOT NULL,
     identificacion INT NOT NULL
-    -- Foreign keys
-    CONSTRAINT FK_Propiedad_EstadoPropiedad FOREIGN KEY (idEstado) REFERENCES EstadoPropiedad(idEstado),
-    CONSTRAINT FK_Propiedad_TipoInmueble FOREIGN KEY (idTipoInmueble) REFERENCES TipoInmueble(idTipoInmueble),
-    CONSTRAINT FK_Identificacion_Cliente FOREIGN KEY (identificacion) REFERENCES Cliente(identificacion)
-);
+) ON Propiedades
 GO
+
 
 -- TABLA ESTADO PROPIEDAD
 CREATE TABLE EstadoPropiedad (
@@ -33,15 +30,47 @@ GO
 
 -- agregamos validaciones
 
--- ALTER TABLE Propiedad
--- ADD CONSTRAINT CHK_Propiedad_Precio_Pos
--- CHECK (precio > 0);
--- GO
-
--- ALTER TABLE Propiedad
--- ADD CONSTRAINT CHK_Propiedad_Ubicacion_Longitud
--- CHECK (LEN(ubicacion) >= 5);
--- GO
+-- Foreign keys
+ALTER TABLE Propiedad
+ADD CONSTRAINT FK_Propiedad_EstadoPropiedad 
+FOREIGN KEY (idEstado) REFERENCES EstadoPropiedad(idEstado);
+GO
 
 
--- final 
+ALTER TABLE Propiedad
+ADD CONSTRAINT FK_Propiedad_TipoInmueble 
+FOREIGN KEY (idTipoInmueble) REFERENCES TipoInmueble(idTipoInmueble);
+GO
+
+ALTER TABLE Propiedad
+ADD CONSTRAINT FK_Identificacion_Cliente 
+FOREIGN KEY (identificacion) REFERENCES Cliente(identificacion);
+GO
+
+-- Checks para Foreign Keys
+ALTER TABLE Propiedad
+ADD CONSTRAINT CHK_Propiedad_IdEstado_Valid
+CHECK (idEstado > 0);
+GO
+
+ALTER TABLE Propiedad
+ADD CONSTRAINT CHK_Propiedad_IdTipoInmueble_Valid
+CHECK (idTipoInmueble > 0);
+GO
+
+ALTER TABLE Propiedad
+ADD CONSTRAINT CHK_Propiedad_Identificacion_Valid
+CHECK (identificacion > 0);
+GO
+
+
+-- Checks adicionales
+ALTER TABLE Propiedad
+ADD CONSTRAINT CHK_Propiedad_Precio_Pos
+CHECK (precio > 0);
+GO
+
+ALTER TABLE Propiedad
+ADD CONSTRAINT CHK_Propiedad_Ubicacion_Longitud
+CHECK (LEN(ubicacion) >= 5);
+GO
