@@ -1,0 +1,33 @@
+# --- Archivos y carpetas locales que no deben subirse ---
+
+# Carpeta de configuración de Visual Studio / VS Code
+.vs/
+.vscode/
+
+# Archivos temporales de base de datos
+*.sqlite
+*.dbmdl
+*.mdf
+*.ldf
+
+# Archivos de usuario o sesión
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Logs y archivos de respaldo
+*.log
+*.bak
+*.backup
+*.tmp
+
+# Archivos de compilación o cache
+bin/
+obj/
+Debug/
+Release/
+
+# Otros archivos generados automáticamente
+Thumbs.db
+Desktop.ini
