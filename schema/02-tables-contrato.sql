@@ -105,6 +105,11 @@ GO
 
 
 
+--			TABLA CONTRATO TERMINOS 
+USE AltosDelValle
+GO
+
+
 --			TABLA TIPO CONTRATO
 USE AltosDelValle
 GO
