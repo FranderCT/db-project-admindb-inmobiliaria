@@ -1,3 +1,3 @@
 -- TRIGGERS TABLA PROPIEDAD
-
+    
 
