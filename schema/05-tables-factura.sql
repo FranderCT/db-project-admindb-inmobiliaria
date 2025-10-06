@@ -1,0 +1,6 @@
+--			TABLA FACTURA
+USE AltosDelValle
+GO
+
+
+--			TABLA FACTURACLIENTE
