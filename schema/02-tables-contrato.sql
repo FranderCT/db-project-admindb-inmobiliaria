@@ -1,0 +1,16 @@
+--			TABLA CONTRATO
+USE AltosDelValle
+GO
+
+
+
+
+--			TABLA TÉRMINOS Y CONDICIONES
+USE AltosDelValle
+GO
+
+
+
+--			TABLA TIPO CONTRATO
+USE AltosDelValle
+GO
