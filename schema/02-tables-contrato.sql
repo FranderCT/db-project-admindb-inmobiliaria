@@ -14,7 +14,6 @@ create table Contrato(
 )on Contratos
 go
 
-
 --		CONSTRAINTS
 
 -- Primary Key
