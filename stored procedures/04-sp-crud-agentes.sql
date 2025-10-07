@@ -75,7 +75,7 @@ begin
     begin transaction
       declare @existe int;
 
-      select @existe = idAgente from Agente where idAgente = @_idAgente;
+      select @existe = identificacion from Agente where identificacion = @_idAgente;
       if @existe is null
 		begin
 			print 'El agente no existe.'; 
@@ -109,7 +109,7 @@ begin
           apellido1 = @_apellido1,
           apellido2 = @_apellido2,
           estado    = @_estado
-      where idAgente = @_idAgente;
+      where identificacion = @_idAgente;
 
     commit transaction
     print 'Agente actualizado correctamente.';
@@ -133,7 +133,7 @@ begin
 
 		  declare @existe int;
 
-		  select @existe = idAgente from Agente where idAgente = @_idAgente;
+		  select @existe = identificacion from Agente where identificacion = @_idAgente;
 		  if @existe is null
 			begin 
 				print 'El agente no existe.'; 
@@ -143,7 +143,7 @@ begin
 
 		  update Agente
 		  set estado = 0
-		  where idAgente = @_idAgente;
+		  where identificacion = @_idAgente;
 
 		commit transaction;
 		print 'Agente desactivado correctamente.';
@@ -172,7 +172,7 @@ begin
 			return;
 		END
 
-      if not exists (select 1 from Agente where idAgente = @_idAgente)
+      if not exists (select 1 from Agente where identificacion = @_idAgente)
 		begin 
 			print 'El agente no existe.'; 
 			rollback transaction;
@@ -181,7 +181,7 @@ begin
 
       update Agente
       set comisionAcumulada = comisionAcumulada + @_monto
-      where idAgente = @_idAgente;
+      where identificacion = @_idAgente;
     commit transaction;
     print 'Comisión actualizada correctamente.';
 
