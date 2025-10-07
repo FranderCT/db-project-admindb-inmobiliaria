@@ -2,11 +2,11 @@
 USE AltosDelValle
 GO
 create or alter procedure sp_insertPropiedad
-	@ubicacion		varchar(100),
-	@precio         money,
-	@idEstado       int,
-	@idTipoInmueble int,
-	@identificacion int
+	@_ubicacion		varchar(100),
+	@_precio         money,
+	@_idEstado       int,
+	@_idTipoInmueble int,
+	@_identificacion int
 as
 begin
 begin try
@@ -31,9 +31,9 @@ begin try
 		return;
       end
 
-      select @existeEstado = idEstado
+      select @existeEstado = idEstadoPropiedad
 		  from EstadoPropiedad
-		  where idEstado = @_idEstado;
+		  where idEstadoPropiedad = @_idEstado;
 
       if @existeEstado is null
       begin
@@ -101,7 +101,7 @@ begin
 				e.nombre as 'Estado', 
 				t.nombre as 'Tipo de Inmueble'
 		from Propiedad p
-			JOIN EstadoPropiedad e on e.idEstado = p.idEstado
+			JOIN EstadoPropiedad e on e.idEstadoPropiedad = p.idEstado
 			JOIN TipoInmueble t on t.idTipoInmueble = p.idTipoInmueble
 		where p.idPropiedad = @_idPropiedad;
 
@@ -157,9 +157,9 @@ begin
 		return;
       end
 
-           select @existeEstado = idEstado
+           select @existeEstado = idEstadoPropiedad
 		  from EstadoPropiedad
-		  where idEstado = @_idEstado;
+		  where idEstadoPropiedad = @_idEstado;
 
       if @existeEstado is null
       begin
@@ -234,9 +234,9 @@ begin
 			return;
 		  end
 
-		  select @existeEstadoNuevo = idEstado
+		  select @existeEstadoNuevo = idEstadoPropiedad
 			  from dbo.EstadoPropiedad
-			  where idEstado = @_idEstadoNuevo;
+			  where idEstadoPropiedad = @_idEstadoNuevo;
 
 		  IF @existeEstadoNuevo is null
 		  begin
