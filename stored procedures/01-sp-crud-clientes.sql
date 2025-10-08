@@ -2,37 +2,54 @@
 USE AltosDelValle;
 GO
 
-CREATE OR ALTER PROCEDURE sp_Cliente_Insertar
-    @identificacion INT,
-    @nombre         VARCHAR(30),
-    @apellido1      VARCHAR(30),
-    @apellido2      VARCHAR(30) = NULL,
-    @telefono       VARCHAR(30)
+CREATE OR ALTER PROCEDURE dbo.sp_Cliente_Insertar
+  @identificacion INT,
+  @nombre         VARCHAR(30),
+  @apellido1      VARCHAR(30),
+  @apellido2      VARCHAR(30) = NULL,
+  @telefono       VARCHAR(30)
 AS
 BEGIN
-    SET NOCOUNT ON;
+  SET NOCOUNT ON;
 
-    BEGIN TRY
-        -- Verificar que la identificación no esté repetida
-        IF EXISTS (SELECT 1 FROM Cliente WHERE identificacion = @identificacion)
-        BEGIN
-            RAISERROR('La identificación ya está registrada.', 16, 1);
-            RETURN;
-        END
+  BEGIN TRY
+    IF EXISTS (SELECT 1 FROM dbo.Cliente WHERE identificacion = @identificacion)
+      THROW 50010, 'La identificación ya está registrada.', 1;
+      
+    IF @identificacion IS NULL OR @identificacion <= 0
+      THROW 50011, 'La identificación es obligatoria y debe ser > 0.', 1;
 
-        -- Insertar el nuevo cliente (estado se asigna por DEFAULT)
-        INSERT INTO Cliente (identificacion, nombre, apellido1, apellido2, telefono)
-        VALUES (@identificacion, @nombre, @apellido1, @apellido2, @telefono);
+    IF @nombre IS NULL OR LTRIM(RTRIM(@nombre)) = ''
+      THROW 50012, 'El nombre es obligatorio.', 1;
 
-        -- Retornar el cliente insertado
-        SELECT * FROM Cliente WHERE identificacion = @identificacion;
-    END TRY
-    BEGIN CATCH
-        DECLARE @msg NVARCHAR(4000) = ERROR_MESSAGE();
-        RAISERROR('Error al insertar cliente: %s', 16, 1, @msg);
-    END CATCH
+    IF @apellido1 IS NULL OR LTRIM(RTRIM(@apellido1)) = ''
+      THROW 50013, 'El primer apellido es obligatorio.', 1;
+
+    IF @telefono IS NULL OR LTRIM(RTRIM(@telefono)) = ''
+      THROW 50014, 'El teléfono es obligatorio.', 1;
+
+    INSERT INTO dbo.Cliente (identificacion, nombre, apellido1, apellido2, telefono)
+    VALUES (@identificacion, @nombre, @apellido1, @apellido2, @telefono);
+
+    SELECT identificacion, nombre, apellido1, apellido2, telefono, estado
+    FROM dbo.Cliente
+    WHERE identificacion = @identificacion;
+  END TRY
+  BEGIN CATCH
+    DECLARE @num INT = ERROR_NUMBER(),
+            @msg NVARCHAR(4000) = ERROR_MESSAGE();
+
+    -- Si es un error de nuestros códigos 50010..50099, relanzamos igual.
+    IF @num BETWEEN 50010 AND 50099
+      THROW @num, @msg, 1;
+
+    -- Si es otro error (FK, CHECK, etc.), lo envolvemos en un mensaje genérico
+    DECLARE @fullMsg NVARCHAR(4000) = N'Error al insertar cliente: ' + @msg;
+    THROW 50050, @fullMsg, 1;
+  END CATCH
 END
 GO
+
 
  -- SP_READ con paginación, ordenamiento y filtros
 USE AltosDelValle;
