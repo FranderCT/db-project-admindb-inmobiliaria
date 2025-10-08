@@ -6,9 +6,7 @@ create or alter procedure dbo.sp_InsertAgente
   @_nombre             varchar(30),
   @_apellido1          varchar(30),
   @_apellido2          varchar(30) = NULL,
-  @_telefono            varchar(30),
-  @_comisionInicial    decimal(18,2) = 0.00,
-  @_estado             bit
+  @_telefono            varchar(30)
   
 as 
 begin
@@ -36,20 +34,6 @@ begin
 				return;
 			end
 
-		  if @_estado not in (0,1)
-			begin 
-				print 'El estado debe ser 0 o 1.'; 
-				rollback transaction;
-				return;
-			end 
-
-		  if @_comisionInicial is null or @_comisionInicial < 0
-			begin 
-				print 'La comisión inicial no puede ser negativa.'; 
-				rollback transaction;
-				return;
-			end
-
 		   if @_telefono is null or LTRIM(RTRIM(@_telefono)) = ''
 		   begin
 				print 'El telefono es obligatorio';
@@ -65,8 +49,8 @@ begin
             end
 
 
-		  insert into Agente (nombre, apellido1, apellido2, telefono, comisionAcumulada, estado)
-		  values (@_nombre, @_apellido1, @_apellido2, @_telefono, @_comisionInicial, @_estado);
+		  insert into Agente (nombre, apellido1, apellido2, telefono)
+		  values (@_nombre, @_apellido1, @_apellido2, @_telefono);
 
 		commit transaction;
 		print 'Agente agregado al sistema correctamente.';
