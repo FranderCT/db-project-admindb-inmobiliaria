@@ -2,64 +2,52 @@
 USE AltosDelValle
 GO
 create or alter procedure dbo.sp_InsertAgente
-  @identificacion      INT, 
+  @_identificacion      INT, 
   @_nombre             varchar(30),
   @_apellido1          varchar(30),
   @_apellido2          varchar(30) = NULL,
   @_telefono            varchar(30)
   
 as 
-begin
-	begin try
-		begin transaction
+BEGIN
+  SET NOCOUNT ON;
 
-		if @identificacion IS NULL OR @identificacion <= 0
-        begin
-            print 'La identificación es obligatoria y debe ser mayor que 0.';
-            rollback transaction;
-            return;
-        end
+  BEGIN TRY
+    IF EXISTS (SELECT 1 FROM Agente WHERE identificacion = @_identificacion)
+      THROW 50010, 'La identificación ya está registrada.', 1;
+      
+    IF @_identificacion IS NULL OR @_identificacion <= 0
+      THROW 50011, 'La identificación es obligatoria y debe ser > 0.', 1;
 
-		  if @_nombre is null or LTRIM(RTRIM(@_nombre)) = ''
-			begin
-				print 'El nombre es obligatorio.'; 
-				rollback transaction;
-				return;
-			END
+    IF @_nombre IS NULL OR LTRIM(RTRIM(@_nombre)) = ''
+      THROW 50012, 'El nombre es obligatorio.', 1;
 
-		  if @_apellido1 is null or LTRIM(RTRIM(@_apellido1)) = ''
-			begin 
-				print 'El primer apellido es obligatorio.'; 
-				rollback transaction;
-				return;
-			end
+    IF @_apellido1 IS NULL OR LTRIM(RTRIM(@_apellido1)) = ''
+      THROW 50013, 'El primer apellido es obligatorio.', 1;
 
-		   if @_telefono is null or LTRIM(RTRIM(@_telefono)) = ''
-		   begin
-				print 'El telefono es obligatorio';
-				rollback transaction;
-				return;
-			end
+    IF @_telefono IS NULL OR LTRIM(RTRIM(@_telefono)) = ''
+      THROW 50014, 'El teléfono es obligatorio.', 1;
 
-			IF LEN(@_telefono) < 8
-            begin
-               print 'El teléfono debe tener al menos 8 dígitos.';
-               rollback transaction;
-               return;
-            end
+    INSERT INTO Agente (identificacion, nombre, apellido1, apellido2, telefono)
+    VALUES (@_identificacion, @_nombre, @_apellido1, @_apellido2, @_telefono);
 
+    SELECT identificacion, nombre, apellido1, apellido2, telefono, estado
+    FROM Agente
+    WHERE identificacion = @_identificacion;
+  END TRY
+  BEGIN CATCH
+    DECLARE @num INT = ERROR_NUMBER(),
+            @msg NVARCHAR(4000) = ERROR_MESSAGE();
 
-		  insert into Agente (nombre, apellido1, apellido2, telefono)
-		  values (@_nombre, @_apellido1, @_apellido2, @_telefono);
+    -- Si es un error de nuestros códigos 50010..50099, relanzamos igual.
+    IF @num BETWEEN 50010 AND 50099
+      THROW @num, @msg, 1;
 
-		commit transaction;
-		print 'Agente agregado al sistema correctamente.';
-	end try
-  begin catch
-    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
-    PRINT 'Error: ' + ERROR_MESSAGE();
-  end catch
-end 
+    -- Si es otro error (FK, CHECK, etc.), lo envolvemos en un mensaje genérico
+    DECLARE @fullMsg NVARCHAR(4000) = N'Error al insertar agente: ' + @msg;
+    THROW 50050, @fullMsg, 1;
+  END CATCH
+END
 go
 
 
@@ -201,3 +189,5 @@ begin
   END CATCH
 end
 go
+
+
