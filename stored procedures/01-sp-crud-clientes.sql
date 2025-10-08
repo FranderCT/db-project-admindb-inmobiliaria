@@ -13,11 +13,9 @@ BEGIN
   SET NOCOUNT ON;
 
   BEGIN TRY
-    -- 50010: identificación duplicada
     IF EXISTS (SELECT 1 FROM dbo.Cliente WHERE identificacion = @identificacion)
       THROW 50010, 'La identificación ya está registrada.', 1;
-
-    -- 50011..50014: validaciones de entrada
+      
     IF @identificacion IS NULL OR @identificacion <= 0
       THROW 50011, 'La identificación es obligatoria y debe ser > 0.', 1;
 
