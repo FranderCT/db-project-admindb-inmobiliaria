@@ -19,7 +19,7 @@ begin try
 
       if @_ubicacion is null or LTRIM(RTRIM(@_ubicacion)) = ''
       begin
-        print 'La ubicación es obligatoria.';
+        print 'La ubicaciï¿½n es obligatoria.';
         rollback transaction; 
 		return;
       end
@@ -59,7 +59,7 @@ begin try
 
       if @existeCliente is null
       begin
-        print 'No existe un cliente con esa identificación.';
+        print 'No existe un cliente con esa identificaciï¿½n.';
         rollback transaction; 
 		return;
       end
@@ -145,7 +145,7 @@ begin
 
       if @_ubicacion is null or LTRIM(RTRIM(@_ubicacion)) = ''
       begin
-        print 'La ubicación es obligatoria.';
+        print 'La ubicaciï¿½n es obligatoria.';
         rollback transaction; 
 		return;
       end
@@ -185,7 +185,7 @@ begin
 
       if @existeCliente is null
       begin
-        print 'No existe un cliente con esa identificación.';
+        print 'No existe un cliente con esa identificaciï¿½n.';
         rollback transaction; 
 		return;
       end
@@ -270,3 +270,80 @@ begin
     print 'Error: ' + ERROR_MESSAGE();
   end catch
 end 
+
+
+-- sp para leer todas las propiedades paginadas y ordenadas
+USE AltosDelValle
+GO
+
+CREATE OR ALTER PROCEDURE dbo.sp_propiedad_paginar
+  @page     INT = 1,
+  @limit    INT = 10,
+  @sortCol  SYSNAME = 'idPropiedad',  -- columna permitida por defecto
+  @sortDir  VARCHAR(4) = 'ASC',       -- ASC | DESC
+  @q        NVARCHAR(100) = NULL      -- tÃ©rmino de bÃºsqueda opcional
+AS
+BEGIN
+  SET NOCOUNT ON;
+
+  -- SanitizaciÃ³n bÃ¡sica
+  IF @page  < 1 SET @page  = 1;
+  IF @limit < 1 SET @limit = 10;
+  IF @sortDir NOT IN ('ASC','DESC') SET @sortDir = 'ASC';
+
+  -- Lista blanca de columnas permitidas para ORDER BY
+  IF @sortCol NOT IN ('idPropiedad','ubicacion','precio','idEstado','idTipoInmueble','identificacion')
+    SET @sortCol = 'idPropiedad';
+
+  DECLARE @offset INT = (@page - 1) * @limit;
+
+  DECLARE @sql NVARCHAR(MAX) =
+    N'SELECT idPropiedad, ubicacion, precio, idEstado, idTipoInmueble, identificacion
+      FROM dbo.Propiedad
+      /**WHERE**/
+      ORDER BY ' + QUOTENAME(@sortCol) + N' ' + @sortDir + N'
+      OFFSET @o ROWS FETCH NEXT @l ROWS ONLY;
+
+      SELECT COUNT(*) AS total,
+             @p AS page,
+             @l AS limit,
+             CEILING(COUNT(*) * 1.0 / @l) AS pageCount,
+             CASE WHEN (@p * @l) < COUNT(*) THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS hasNextPage,
+             CASE WHEN @p > 1 THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS hasPrevPage
+      FROM dbo.Propiedad
+      /**WHERE**/;';
+
+  DECLARE @where NVARCHAR(MAX) = N'';
+  DECLARE @hasQ BIT = 0;
+  DECLARE @like NVARCHAR(200);
+
+  IF @q IS NOT NULL AND LTRIM(RTRIM(@q)) <> N''
+  BEGIN
+    SET @hasQ = 1;
+    SET @like = N'%' + @q + N'%';
+
+    -- Filtros de bÃºsqueda: ubicaciÃ³n, precio, idEstado, tipo, identificaciÃ³n
+    SET @where = N' WHERE (
+        ubicacion LIKE @like
+        OR CAST(precio AS NVARCHAR(50)) LIKE @like
+        OR CAST(idEstado AS NVARCHAR(10)) LIKE @like
+        OR CAST(idTipoInmueble AS NVARCHAR(10)) LIKE @like
+        OR CAST(identificacion AS NVARCHAR(20)) LIKE @like
+      )';
+  END
+
+  -- Inyecta el WHERE en ambas consultas
+  SET @sql = REPLACE(@sql, N'/**WHERE**/', @where);
+
+  IF @hasQ = 1
+    EXEC sp_executesql
+      @sql,
+      N'@o INT, @l INT, @p INT, @like NVARCHAR(200)',
+      @o=@offset, @l=@limit, @p=@page, @like=@like;
+  ELSE
+    EXEC sp_executesql
+      @sql,
+      N'@o INT, @l INT, @p INT',
+      @o=@offset, @l=@limit, @p=@page;
+END
+GO
