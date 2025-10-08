@@ -2,15 +2,25 @@
 USE AltosDelValle
 GO
 create or alter procedure dbo.sp_InsertAgente
+  @identificacion      INT, 
   @_nombre             varchar(30),
   @_apellido1          varchar(30),
   @_apellido2          varchar(30) = NULL,
-  @_estado             bit,
-  @_comisionInicial    decimal(18,2) = 0.00
+  @_telefono            varchar(30),
+  @_comisionInicial    decimal(18,2) = 0.00,
+  @_estado             bit
+  
 as 
 begin
 	begin try
 		begin transaction
+
+		if @identificacion IS NULL OR @identificacion <= 0
+        begin
+            print 'La identificación es obligatoria y debe ser mayor que 0.';
+            rollback transaction;
+            return;
+        end
 
 		  if @_nombre is null or LTRIM(RTRIM(@_nombre)) = ''
 			begin
@@ -40,8 +50,23 @@ begin
 				return;
 			end
 
-		  insert into Agente (nombre, apellido1, apellido2, comisionAcumulada, estado)
-		  values (@_nombre, @_apellido1, @_apellido2, @_comisionInicial, @_estado);
+		   if @_telefono is null or LTRIM(RTRIM(@_telefono)) = ''
+		   begin
+				print 'El telefono es obligatorio';
+				rollback transaction;
+				return;
+			end
+
+			IF LEN(@_telefono) < 8
+            begin
+               print 'El teléfono debe tener al menos 8 dígitos.';
+               rollback transaction;
+               return;
+            end
+
+
+		  insert into Agente (nombre, apellido1, apellido2, telefono, comisionAcumulada, estado)
+		  values (@_nombre, @_apellido1, @_apellido2, @_telefono, @_comisionInicial, @_estado);
 
 		commit transaction;
 		print 'Agente agregado al sistema correctamente.';

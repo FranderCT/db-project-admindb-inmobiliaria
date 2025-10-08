@@ -1,4 +1,6 @@
 -- CREACION DE TODAS LAS TABLAS
+use AltosDelValle
+go
 
 -- CLIENTE
 CREATE TABLE Cliente (
