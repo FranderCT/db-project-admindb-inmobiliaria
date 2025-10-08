@@ -34,13 +34,16 @@ BEGIN
 END
 GO
 
--- SP_READ
+ -- SP_READ con paginación, ordenamiento y filtros
+USE AltosDelValle;
+GO
 CREATE OR ALTER PROCEDURE dbo.sp_cliente_paginar_orden
   @page     INT = 1,
   @limit    INT = 10,
   @sortCol  SYSNAME = 'identificacion',     -- columna permitida
   @sortDir  VARCHAR(4) = 'ASC',             -- 'ASC' | 'DESC'
-  @q        NVARCHAR(100) = NULL            -- término de búsqueda (opcional)
+  @q        NVARCHAR(100) = NULL,           -- término de búsqueda (opcional)
+  @estado   BIT = NULL                      -- filtro por estado (opcional)
 AS
 BEGIN
   SET NOCOUNT ON;
@@ -56,7 +59,7 @@ BEGIN
 
   DECLARE @offset INT = (@page - 1) * @limit;
 
-  -- Armado del WHERE dinámico solo si hay @q
+  -- Base SQL dinámica
   DECLARE @sql NVARCHAR(MAX) =
     N'SELECT identificacion, nombre, apellido1, apellido2, telefono, estado
       FROM dbo.Cliente
@@ -74,17 +77,16 @@ BEGIN
       /**WHERE**/;';
 
   DECLARE @where NVARCHAR(MAX) = N'';
-  DECLARE @hasQ BIT = 0;
+  DECLARE @hasCondition BIT = 0;
   DECLARE @like NVARCHAR(200);
 
+  -- Filtro por búsqueda
   IF @q IS NOT NULL AND LTRIM(RTRIM(@q)) <> N''
   BEGIN
-    SET @hasQ = 1;
+    SET @hasCondition = 1;
     SET @like = N'%' + @q + N'%';
 
-    -- Nota: Puedes ajustar la colación a una CI_AI si querés ignorar acentos:
-    --  ... LIKE @like COLLATE Latin1_General_CI_AI
-    SET @where = N' WHERE (
+    SET @where = @where + N' WHERE (
         nombre LIKE @like
         OR apellido1 LIKE @like
         OR ISNULL(apellido2, '''') LIKE @like
@@ -94,14 +96,40 @@ BEGIN
       )';
   END
 
-  -- Inserta el WHERE (o nada) en ambos lugares
+  -- Filtro por estado
+  IF @estado IS NOT NULL
+  BEGIN
+    IF @hasCondition = 1
+      SET @where = @where + N' AND estado = @estado';
+    ELSE
+    BEGIN
+      SET @hasCondition = 1;
+      SET @where = N' WHERE estado = @estado';
+    END
+  END
+
+  -- Inserta el WHERE dinámico en ambas partes del SQL
   SET @sql = REPLACE(@sql, N'/**WHERE**/', @where);
 
-  IF @hasQ = 1
+  -- Ejecuta SQL dinámica con los parámetros necesarios
+  IF @q IS NOT NULL AND LTRIM(RTRIM(@q)) <> N'' AND @estado IS NOT NULL
+    EXEC sp_executesql
+      @sql,
+      N'@o INT, @l INT, @p INT, @like NVARCHAR(200), @estado BIT',
+      @o=@offset, @l=@limit, @p=@page, @like=@like, @estado=@estado;
+
+  ELSE IF @q IS NOT NULL AND LTRIM(RTRIM(@q)) <> N''
     EXEC sp_executesql
       @sql,
       N'@o INT, @l INT, @p INT, @like NVARCHAR(200)',
       @o=@offset, @l=@limit, @p=@page, @like=@like;
+
+  ELSE IF @estado IS NOT NULL
+    EXEC sp_executesql
+      @sql,
+      N'@o INT, @l INT, @p INT, @estado BIT',
+      @o=@offset, @l=@limit, @p=@page, @estado=@estado;
+
   ELSE
     EXEC sp_executesql
       @sql,
@@ -109,19 +137,7 @@ BEGIN
       @o=@offset, @l=@limit, @p=@page;
 END
 GO
--- este sp da todos los datos de los clientes paginados segun sus parametros
 
-CREATE OR ALTER PROCEDURE dbo.sp_cliente_leer_todos
-AS
-BEGIN
-    SET NOCOUNT ON;
-    SELECT identificacion,
-    nombre + ' ' + apellido1 + ' ' + ISNULL(apellido2, '') AS nombreCompleto,
-    telefono,
-    estado
-    FROM dbo.Cliente;
-END
-GO
 
 
 -- leer cliente por identificacion
@@ -209,3 +225,5 @@ GO
 
 USE AltosDelValle;
 GO
+
+
