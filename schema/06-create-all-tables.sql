@@ -54,6 +54,7 @@ CREATE TABLE Agente (
     nombre VARCHAR(30) NOT NULL,
     apellido1 VARCHAR(30) NOT NULL,
     apellido2 VARCHAR(30) NULL,
+    telefono VARCHAR(30) NOT NULL,
     comisionAcumulada DECIMAL(18, 2) NOT NULL DEFAULT 0,
     estado BIT NOT NULL DEFAULT 1
 );
