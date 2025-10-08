@@ -20,6 +20,16 @@ BEGIN
             RETURN;
         END
 
+        -- validar que los campos obligatorios no sean nulos o vacíos
+        IF @identificacion IS NULL OR @identificacion <= 0
+            RAISERROR('La identificación es obligatoria y debe ser > 0.', 16, 1);
+        IF @nombre IS NULL OR LTRIM(RTRIM(@nombre)) = ''
+            RAISERROR('El nombre es obligatorio.', 16, 1);
+        IF @apellido1 IS NULL OR LTRIM(RTRIM(@apellido1)) = ''
+            RAISERROR('El primer apellido es obligatorio.', 16, 1);
+        IF @telefono IS NULL OR LTRIM(RTRIM(@telefono)) = ''
+            RAISERROR('El teléfono es obligatorio.', 16, 1);
+
         -- Insertar el nuevo cliente (estado se asigna por DEFAULT)
         INSERT INTO Cliente (identificacion, nombre, apellido1, apellido2, telefono)
         VALUES (@identificacion, @nombre, @apellido1, @apellido2, @telefono);
