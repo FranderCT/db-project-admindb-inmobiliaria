@@ -270,7 +270,7 @@ begin
     print 'Error: ' + ERROR_MESSAGE();
   end catch
 end 
-
+go
 
 -- sp para leer todas las propiedades paginadas y ordenadas
 USE AltosDelValle
