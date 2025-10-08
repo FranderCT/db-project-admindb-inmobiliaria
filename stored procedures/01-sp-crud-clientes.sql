@@ -123,6 +123,31 @@ BEGIN
 END
 GO
 
+
+-- leer cliente por identificacion
+CREATE OR ALTER PROCEDURE dbo.sp_cliente_porIdentificacion
+    @identificacion INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF @identificacion IS NULL OR @identificacion <= 0
+        THROW 50000, 'La identificación es obligatoria y debe ser > 0.', 1;
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.Cliente WHERE identificacion = @identificacion)
+        THROW 50000, 'Cliente no encontrado.', 1;
+
+    SELECT identificacion,
+           nombre,
+           apellido1,
+           apellido2,
+           telefono,
+           estado
+    FROM dbo.Cliente
+    WHERE identificacion = @identificacion;
+END
+GO
+
 -- este sp da todos los datos de los clientes sin paginar
 
 -- SP_UPDATE
