@@ -4,6 +4,6 @@
     "\\schema",
     "\\stored procedures"
   ],
-  "SelectedNode": "\\stored procedures\\05-sp-crud-facturas.sql",
+  "SelectedNode": "\\stored procedures\\01-sp-crud-clientes.sql",
   "PreviewInSolutionExplorer": false
 }
