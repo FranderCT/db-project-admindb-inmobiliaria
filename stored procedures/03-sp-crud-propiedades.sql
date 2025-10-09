@@ -19,7 +19,7 @@ begin try
 
       if @_ubicacion is null or LTRIM(RTRIM(@_ubicacion)) = ''
       begin
-        print 'La ubicaci�n es obligatoria.';
+        print 'La ubicacion es obligatoria.';
         rollback transaction; 
 		return;
       end
