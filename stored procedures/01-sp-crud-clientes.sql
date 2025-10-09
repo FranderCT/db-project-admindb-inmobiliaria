@@ -51,58 +51,57 @@ END
 GO
 
 
- -- SP_READ con paginación, ordenamiento y filtros
-USE AltosDelValle;
+use AltosDelValle;
 GO
+ -- SP_READ con paginación, ordenamiento y filtros
 CREATE OR ALTER PROCEDURE dbo.sp_cliente_paginar_orden
   @page     INT = 1,
   @limit    INT = 10,
-  @sortCol  SYSNAME = 'identificacion',     -- columna permitida
-  @sortDir  VARCHAR(4) = 'ASC',             -- 'ASC' | 'DESC'
-  @q        NVARCHAR(100) = NULL,           -- término de búsqueda (opcional)
-  @estado   BIT = NULL                      -- filtro por estado (opcional)
+  @sortCol  SYSNAME = 'identificacion',
+  @sortDir  VARCHAR(4) = 'ASC',
+  @q        NVARCHAR(100) = NULL,
+  @estado   BIT = NULL
 AS
 BEGIN
   SET NOCOUNT ON;
 
-  -- Sanitización básica
+  -- Sanitización
   IF @page  < 1 SET @page  = 1;
   IF @limit < 1 SET @limit = 10;
   IF @sortDir NOT IN ('ASC','DESC') SET @sortDir = 'ASC';
-
-  -- Lista blanca de columnas permitidas para ORDER BY
   IF @sortCol NOT IN ('identificacion','nombre','apellido1','telefono','estado')
     SET @sortCol = 'identificacion';
 
   DECLARE @offset INT = (@page - 1) * @limit;
 
-  -- Base SQL dinámica
   DECLARE @sql NVARCHAR(MAX) =
-    N'SELECT identificacion, nombre, apellido1, apellido2, telefono, estado
-      FROM dbo.Cliente
-      /**WHERE**/
-      ORDER BY ' + QUOTENAME(@sortCol) + N' ' + @sortDir + N'
-      OFFSET @o ROWS FETCH NEXT @l ROWS ONLY;
+  N'
+  -- datos paginados
+  SELECT identificacion, nombre, apellido1, apellido2, telefono, estado
+  FROM dbo.Cliente
+  /**WHERE**/
+  ORDER BY ' + QUOTENAME(@sortCol) + N' ' + @sortDir + N'
+  OFFSET @o ROWS FETCH NEXT @l ROWS ONLY;
 
-      SELECT COUNT(*) AS total,
-             @p AS page,
-             @l AS limit,
-             CEILING(COUNT(*) * 1.0 / @l) AS pageCount,
-             CASE WHEN (@p * @l) < COUNT(*) THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS hasNextPage,
-             CASE WHEN @p > 1 THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS hasPrevPage
-      FROM dbo.Cliente
-      /**WHERE**/;';
+  -- metadatos de paginación
+  SELECT 
+      COUNT(*) AS total,
+      @p       AS page,
+      @l       AS limit,
+      ( (CAST(COUNT(*) AS INT) + @l - 1) / @l ) AS pageCount,
+      CASE WHEN (@p * @l) < COUNT(*) THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS hasNextPage,
+      CASE WHEN @p > 1 THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS hasPrevPage
+  FROM dbo.Cliente
+  /**WHERE**/;';
 
   DECLARE @where NVARCHAR(MAX) = N'';
   DECLARE @hasCondition BIT = 0;
   DECLARE @like NVARCHAR(200);
 
-  -- Filtro por búsqueda
   IF @q IS NOT NULL AND LTRIM(RTRIM(@q)) <> N''
   BEGIN
     SET @hasCondition = 1;
     SET @like = N'%' + @q + N'%';
-
     SET @where = @where + N' WHERE (
         nombre LIKE @like
         OR apellido1 LIKE @like
@@ -113,7 +112,6 @@ BEGIN
       )';
   END
 
-  -- Filtro por estado
   IF @estado IS NOT NULL
   BEGIN
     IF @hasCondition = 1
@@ -125,28 +123,23 @@ BEGIN
     END
   END
 
-  -- Inserta el WHERE dinámico en ambas partes del SQL
   SET @sql = REPLACE(@sql, N'/**WHERE**/', @where);
 
-  -- Ejecuta SQL dinámica con los parámetros necesarios
   IF @q IS NOT NULL AND LTRIM(RTRIM(@q)) <> N'' AND @estado IS NOT NULL
     EXEC sp_executesql
       @sql,
       N'@o INT, @l INT, @p INT, @like NVARCHAR(200), @estado BIT',
       @o=@offset, @l=@limit, @p=@page, @like=@like, @estado=@estado;
-
   ELSE IF @q IS NOT NULL AND LTRIM(RTRIM(@q)) <> N''
     EXEC sp_executesql
       @sql,
       N'@o INT, @l INT, @p INT, @like NVARCHAR(200)',
       @o=@offset, @l=@limit, @p=@page, @like=@like;
-
   ELSE IF @estado IS NOT NULL
     EXEC sp_executesql
       @sql,
       N'@o INT, @l INT, @p INT, @estado BIT',
       @o=@offset, @l=@limit, @p=@page, @estado=@estado;
-
   ELSE
     EXEC sp_executesql
       @sql,
@@ -155,66 +148,19 @@ BEGIN
 END
 GO
 
-
-
--- leer cliente por identificacion
-CREATE OR ALTER PROCEDURE dbo.sp_cliente_porIdentificacion
-    @identificacion INT
+-- sp leer todos los clientes 
+CREATE OR ALTER PROCEDURE dbo.sp_cliente_leer_todos
 AS
 BEGIN
-    SET NOCOUNT ON;
-
-    IF @identificacion IS NULL OR @identificacion <= 0
-        THROW 50000, 'La identificación es obligatoria y debe ser > 0.', 1;
-
-    IF NOT EXISTS (SELECT 1 FROM dbo.Cliente WHERE identificacion = @identificacion)
-        THROW 50000, 'Cliente no encontrado.', 1;
-
-    SELECT identificacion,
-           nombre,
-           apellido1,
-           apellido2,
-           telefono,
-           estado
-    FROM dbo.Cliente
-    WHERE identificacion = @identificacion;
-END
-GO
-
--- este sp da todos los datos de los clientes sin paginar
-
--- SP_UPDATE
-CREATE OR ALTER PROCEDURE sp_cliente_actualizar
-    @identificacion INT,
-    @nombre         VARCHAR(30) = NULL,
-    @apellido1      VARCHAR(30) = NULL,
-    @apellido2      VARCHAR(30) = NULL,
-    @telefono       VARCHAR(30) = NULL,
-    @estado         BIT = NULL
-AS
-BEGIN
-    SET NOCOUNT ON;
-    IF @identificacion IS NULL OR @identificacion <= 0
-        THROW 50000, 'La identificación es obligatoria y debe ser > 0.', 1;
-    -- Verificar que el cliente exista
-    IF NOT EXISTS (SELECT 1 FROM dbo.Cliente WHERE identificacion = @identificacion)
-        THROW 50000, 'Cliente no encontrado.', 1;
-    -- Actualizar solo los campos que no son NULL
-    UPDATE dbo.Cliente
-    SET
-        nombre = COALESCE(@nombre, nombre),
-        apellido1 = COALESCE(@apellido1, apellido1),
-        apellido2 = COALESCE(@apellido2, apellido2),
-        telefono = COALESCE(@telefono, telefono),
-        estado = COALESCE(@estado, estado)
-    WHERE identificacion = @identificacion;
-    
+    SET NOCOUNT ON; 
+    -- validar que no esta vacio la tabla
+    IF NOT EXISTS (SELECT 1 FROM dbo.Cliente)
+        THROW 50020, 'No hay clientes registrados.', 1;
     SELECT identificacion, nombre, apellido1, apellido2, telefono, estado
-    FROM dbo.Cliente
-    WHERE identificacion = @identificacion;
-
+    FROM dbo.Cliente;
 END
 GO
+
 
 -- SP_DELETE
 -- este sp solo desactiva el cliente (estado = 0)
