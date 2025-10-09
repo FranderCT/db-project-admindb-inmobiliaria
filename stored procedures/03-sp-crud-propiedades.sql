@@ -1,4 +1,7 @@
 -- SP_INSERT 
+
+exec sp_insertPropiedad @_ubicacion = 'San Juan', @_precio = 123, @_idEstado =1, @_idTipoInmueble = 2, @_identificacion = 1212121212
+
 USE AltosDelValle
 GO
 create or alter procedure sp_insertPropiedad
