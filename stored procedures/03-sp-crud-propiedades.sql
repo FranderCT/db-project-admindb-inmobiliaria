@@ -75,7 +75,6 @@ begin try
     commit transaction;
 
     print 'Propiedad registrada correctamente.';
-    select @nuevoIdPropiedad as idPropiedad;
 end try
 
   begin catch
