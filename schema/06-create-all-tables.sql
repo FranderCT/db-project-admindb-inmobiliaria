@@ -1,5 +1,6 @@
 -- CREACION DE TODAS LAS TABLAS
-
+use AltosDelValle
+go
 -- CLIENTE
 CREATE TABLE Cliente (
     identificacion INT PRIMARY KEY,
@@ -107,7 +108,6 @@ CREATE TABLE Contrato(
 	idTipoContrato INT NOT NULL,
 	idPropiedad INT NOT NULL, 
 	idAgente INT NOT NULL, 
-	idCondicion INT NOT NULL,
     CONSTRAINT pk_ContratoIdContrato PRIMARY KEY (idContrato)
 ) ON Contratos;
 GO
@@ -162,10 +162,6 @@ ADD CONSTRAINT CK_Contrato_IdPropiedad_Pos CHECK (idPropiedad IS NULL OR idPropi
 
 ALTER TABLE Contrato 
 ADD CONSTRAINT CK_Contrato_IdAgente_Pos CHECK (idAgente IS NULL OR idAgente > 0);
-
-ALTER TABLE Contrato 
-ADD CONSTRAINT CK_Contrato_IdCondicion_Pos CHECK (idCondicion IS NULL OR idCondicion > 0);
-GO
 
 -- CLIENTE CONTRATO (Cliente, TipoRol, Contrato)
 CREATE TABLE ClienteContrato (
