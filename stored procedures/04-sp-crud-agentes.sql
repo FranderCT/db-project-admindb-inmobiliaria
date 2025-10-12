@@ -51,11 +51,48 @@ END
 go
 
 
--- SP_READ
+-- SP_READ VER TODOS LOS AGENTES ACTIVOS
 USE AltosDelValle
 GO
 
+CREATE OR ALTER PROCEDURE dbo.sp_AgenteLeerTodosActivos
+AS
+BEGIN
+    SET NOCOUNT ON;
 
+    SELECT 
+        identificacion,
+        nombre,
+        apellido1,
+        apellido2,
+        telefono,
+        estado
+    FROM dbo.Agente
+    WHERE estado = 1; 
+END
+GO
+
+
+-- SP_READ VER TODOS LOS AGENTES INACTIVOS
+
+USE AltosDelValle
+GO
+
+CREATE OR ALTER PROCEDURE dbo.sp_AgenteLeerTodosInactivos
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        identificacion,
+        nombre,
+        apellido1,
+        apellido2,
+        telefono,
+        estado
+    FROM dbo.Agente
+    WHERE estado = 0; 
+END
+GO
 
 -- SP_UPDATE
 USE AltosDelValle
@@ -190,4 +227,5 @@ begin
 end
 go
 
-
+select * from Agente
+go
