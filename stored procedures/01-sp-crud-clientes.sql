@@ -190,3 +190,151 @@ USE AltosDelValle;
 GO
 
 
+
+
+---TABLA INTERMEDIA ClienteContrato
+
+---sp_clienteContrato_insertar
+CREATE PROCEDURE sp_clienteContrato_insertar
+  @identificacion INT,
+  @idRol INT,
+  @idContrato INT
+AS
+BEGIN
+  INSERT INTO ClienteContrato (identificacion, idRol, idContrato)
+  VALUES (@identificacion, @idRol, @idContrato);
+
+  -- Retorna el registro insertado
+  SELECT 
+    cc.idClienteContrato,
+    cc.idContrato,
+    c.identificacion,
+    c.nombre AS nombreCliente,
+    tr.nombre AS rol
+  FROM ClienteContrato cc
+  INNER JOIN Cliente c ON cc.identificacion = c.identificacion
+  INNER JOIN TipoRol tr ON cc.idRol = tr.idRol
+  WHERE cc.idClienteContrato = SCOPE_IDENTITY();
+END
+GO
+
+--sp_clienteContrato_insertar_varios  --Este inserta varios clientes en un contrato  
+CREATE PROCEDURE sp_clienteContrato_insertar_varios
+  @json NVARCHAR(MAX)
+AS
+BEGIN
+  -- Convertir JSON a tabla
+  DECLARE @data TABLE (
+    identificacion INT,
+    idRol INT,
+    idContrato INT
+  );
+
+  INSERT INTO @data (identificacion, idRol, idContrato)
+  SELECT identificacion, idRol, idContrato
+  FROM OPENJSON(@json)
+  WITH (
+    identificacion INT,
+    idRol INT,
+    idContrato INT
+  );
+
+  -- Insertar en tabla real
+  INSERT INTO ClienteContrato (identificacion, idRol, idContrato)
+  SELECT identificacion, idRol, idContrato FROM @data;
+
+  -- Retornar lo insertado si querés
+  SELECT * FROM ClienteContrato
+  WHERE idClienteContrato IN (
+    SELECT TOP (@@ROWCOUNT) idClienteContrato FROM ClienteContrato ORDER BY idClienteContrato DESC
+  );
+END
+GO
+
+---sp_clienteContrato_listarTodos
+CREATE PROCEDURE sp_clienteContrato_listarTodos
+AS
+BEGIN
+  SELECT 
+    cc.idClienteContrato,
+    cc.idContrato,
+    c.identificacion,
+    c.nombre AS nombreCliente,
+    tr.nombre AS rol
+  FROM ClienteContrato cc
+  INNER JOIN Cliente c ON cc.identificacion = c.identificacion
+  INNER JOIN TipoRol tr ON cc.idRol = tr.idRol
+  ORDER BY cc.idClienteContrato ASC;
+END
+GO
+
+----sp_clienteContrato_porContrato
+CREATE PROCEDURE sp_clienteContrato_porContrato
+  @idContrato INT
+AS
+BEGIN
+  SELECT 
+    cc.idClienteContrato,
+    cc.idContrato,
+    c.identificacion,
+    c.nombre AS nombreCliente,
+    tr.nombre AS rol
+  FROM ClienteContrato cc
+  INNER JOIN Cliente c ON cc.identificacion = c.identificacion
+  INNER JOIN TipoRol tr ON cc.idRol = tr.idRol
+  WHERE cc.idContrato = @idContrato;
+END
+GO
+
+---sp_clienteContrato_porCliente
+CREATE PROCEDURE sp_clienteContrato_porCliente
+  @identificacion INT
+AS
+BEGIN
+  -- 🔹 Selecciona todos los contratos en los que ha participado el cliente dado,
+  -- mostrando su rol (comprador, inquilino, etc.)
+  SELECT 
+    cc.idClienteContrato,
+    cc.idContrato,
+    c.identificacion,
+    c.nombre AS nombreCliente,
+    tr.nombre AS rol
+  FROM ClienteContrato cc
+  INNER JOIN Cliente c ON cc.identificacion = c.identificacion
+  INNER JOIN TipoRol tr ON cc.idRol = tr.idRol
+  WHERE cc.identificacion = @identificacion
+  ORDER BY cc.idClienteContrato ASC;
+END
+GO
+
+----sp_clienteContrato_porRol
+CREATE PROCEDURE sp_clienteContrato_porRol
+  @idRol INT
+AS
+BEGIN
+  -- 🔹 Retorna todos los vínculos cliente-contrato con el rol especificado
+  SELECT 
+    cc.idClienteContrato,
+    cc.idContrato,
+    c.identificacion,
+    c.nombre AS nombreCliente,
+    tr.nombre AS rol
+  FROM ClienteContrato cc
+  INNER JOIN Cliente c ON cc.identificacion = c.identificacion
+  INNER JOIN TipoRol tr ON cc.idRol = tr.idRol
+  WHERE cc.idRol = @idRol
+  ORDER BY cc.idClienteContrato ASC;
+END
+GO
+
+
+---INSERT PARA TIPO DE ROL 
+USE AltosDelValle; 
+INSERT INTO TipoRol (nombre) VALUES 
+  ('Inquilino'),
+  ('Arrendatario'),
+  ('Comprador'),
+  ('Vendedor');
+GO
+
+
