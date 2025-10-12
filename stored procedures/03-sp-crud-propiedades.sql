@@ -1,62 +1,83 @@
 -- SP_INSERT 
-USE AltosDelValle;
-GO
-CREATE OR ALTER PROCEDURE dbo.sp_insertPropiedad
-  @_ubicacion       VARCHAR(100),
-  @_precio          MONEY,
-  @_idEstado        INT,
-  @_idTipoInmueble  INT,
-  @_identificacion  INT
-AS
-BEGIN
-  SET NOCOUNT ON;
-  SET XACT_ABORT ON;
+create or alter procedure sp_insertPropiedad
+	@_ubicacion		varchar(100),
+	@_precio         money,
+	@_idEstado       int,
+	@_idTipoInmueble int,
+	@_identificacion int
+as
+begin
+begin try
+    begin transaction;
 
-  BEGIN TRY
-    BEGIN TRAN;
+      declare @existeEstado int;
+      declare @existeTipo int;
+      declare @existeCliente int;
+      declare @nuevoIdPropiedad int;
 
-    DECLARE @existeEstado INT, @existeTipo INT, @existeCliente INT, @nuevoIdPropiedad INT;
+      if @_ubicacion is null or LTRIM(RTRIM(@_ubicacion)) = ''
+      begin
+        print 'La ubicacion es obligatoria.';
+        rollback transaction; 
+		return;
+      end
 
-	IF NULLIF(LTRIM(RTRIM(@_ubicacion)), '') IS NULL
-	  THROW 50001, 'La ubicación es obligatoria.', 1;
+      if @_precio is null or @_precio <= 0
+      begin
+        print 'El precio debe ser mayor a 0.';
+        rollback transaction; 
+		return;
+      end
 
-    IF @_precio IS NULL OR @_precio <= 0
-      THROW 50002, 'El precio debe ser mayor a 0.', 1;
+      select @existeEstado = idEstadoPropiedad
+		  from EstadoPropiedad
+		  where idEstadoPropiedad = @_idEstado;
 
-    SELECT @existeEstado = idEstadoPropiedad
-    FROM EstadoPropiedad WHERE idEstadoPropiedad = @_idEstado;
-    IF @existeEstado IS NULL
-      THROW 50003, 'Ese estado no existe.', 1;
+      if @existeEstado is null
+      begin
+        print 'Ese estado no existe.';
+        rollback transaction; 
+		return;
+      end
 
-    SELECT @existeTipo = idTipoInmueble
-    FROM TipoInmueble WHERE idTipoInmueble = @_idTipoInmueble;
-    IF @existeTipo IS NULL
-      THROW 50004, 'Ese tipo de inmueble no existe.', 1;
+      select @existeTipo = idTipoInmueble
+		  from TipoInmueble
+		  where idTipoInmueble = @_idTipoInmueble;
 
-    SELECT @existeCliente = identificacion
-    FROM Cliente WHERE identificacion = @_identificacion;
-    IF @existeCliente IS NULL
-      THROW 50005, 'No existe un cliente con esa identificación.', 1;
+      if @existeTipo is null
+      begin
+        print 'Ese tipo de inmueble no existe.';
+        rollback transaction; 
+		return;
+      end
 
-    INSERT INTO Propiedad (ubicacion, precio, idEstado, idTipoInmueble, identificacion)
-    VALUES (@_ubicacion, @_precio, @_idEstado, @_idTipoInmueble, @_identificacion);
+      select @existeCliente = identificacion
+		  from Cliente
+		  where identificacion = @_identificacion;
 
-    SET @nuevoIdPropiedad = SCOPE_IDENTITY();
+      if @existeCliente is null
+      begin
+        print 'No existe un cliente con esa identificaci�n.';
+        rollback transaction; 
+		return;
+      end
 
-    COMMIT TRAN;
+      insert into Propiedad
+        (ubicacion, precio, idEstado, idTipoInmueble, identificacion)
+      values
+        (@_ubicacion, @_precio, @_idEstado, @_idTipoInmueble, @_identificacion);
 
-    -- Ruta feliz: SIEMPRE devuelve algo
-    SELECT IdPropiedad = @nuevoIdPropiedad;
-  END TRY
-  BEGIN CATCH
-    IF XACT_STATE() <> 0 ROLLBACK TRAN;
-    -- Repropaga el error con su número y mensaje para que el driver lo capture
-    DECLARE @Num INT = ERROR_NUMBER(), @Msg NVARCHAR(4000) = ERROR_MESSAGE(), @State INT = ERROR_STATE();
-    THROW @Num, @Msg, @State;
-  END CATCH
-END
-GO
+    commit transaction;
 
+    print 'Propiedad registrada correctamente.';
+end try
+
+  begin catch
+    if XACT_STATE() <> 0 rollback transaction;
+    print 'Error: ' + ERROR_MESSAGE();
+  end catch
+end 
+go
 
 -- SP_READ BY ID
 USE AltosDelValle
