@@ -1,29 +1,56 @@
 -- TRIGGERS TABLA CLIENTE
 
---Evita que un cliente sea desactivado si tiene facturas asociadas (en FacturaCliente).
-CREATE TRIGGER trg_evitarDesactivarClienteFacturas
-ON Cliente
-INSTEAD OF DELETE
-AS
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM FacturaCliente fc
-        INNER JOIN deleted d ON fc.identificacion = d.identificacion
-    )
-    BEGIN
-        RAISERROR('No se puede desactivar el cliente porque tiene facturas pendientes.', 16, 1);
-        ROLLBACK TRANSACTION;
-        RETURN;
-    END;
+--TRIGGER Evita desactivar clientes (UPDATE estado = 0)
+    --si tienen facturas o propiedades asociadas.
+    --Protege el SP sp_cliente_desactivar.
+  
+	CREATE OR ALTER TRIGGER trg_evitarDesactivarCliente_Update
+	ON dbo.Cliente
+	FOR UPDATE
+	AS
+	BEGIN
+		SET NOCOUNT ON;
 
-    -- Si no tiene facturas pendientes, se desactiva en lugar de eliminar
-    UPDATE Cliente
-    SET estado = 0
-    WHERE identificacion IN (SELECT identificacion FROM deleted);
-END;
-GO
+		IF UPDATE(estado)
+		BEGIN
+			IF EXISTS (
+				SELECT 1
+				FROM inserted i
+				INNER JOIN deleted d ON i.identificacion = d.identificacion
+				WHERE d.estado = 1 AND i.estado = 0
+			)
+			BEGIN
+				-- Validar facturas
+				IF EXISTS (
+					SELECT 1
+					FROM dbo.FacturaCliente fc
+					INNER JOIN inserted i ON fc.identificacion = i.identificacion
+					WHERE i.estado = 0
+				)
+				BEGIN
+					RAISERROR('No se puede desactivar el cliente porque tiene facturas asociadas.', 16, 1);
+					ROLLBACK TRANSACTION;
+					RETURN;
+				END;
 
+				-- Validar propiedades
+				IF EXISTS (
+					SELECT 1
+					FROM dbo.Propiedad p
+					INNER JOIN inserted i ON p.identificacion = i.identificacion
+					WHERE i.estado = 0
+				)
+				BEGIN
+					RAISERROR('No se puede desactivar el cliente porque tiene propiedades registradas.', 16, 1);
+					ROLLBACK TRANSACTION;
+					RETURN
+				END
+			END
+		END
+	END
+	GO
+
+    
 -- Evita insertar o actualizar un cliente con un teléfono ya asignado a otro cliente activo.
 CREATE TRIGGER trg_evitarDuplicadosDeTelefonos
 ON Cliente
@@ -60,30 +87,6 @@ BEGIN
             INSERT (identificacion, nombre, apellido1, apellido2, telefono, estado)
             VALUES (source.identificacion, source.nombre, source.apellido1, source.apellido2, source.telefono, source.estado);
     END
-END
-GO
-
--- Evita que se desactive un cliente que tenga propiedades registradas.
- CREATE TRIGGER trg_evitarDesactivarClienteConPropiedades
-ON Cliente
-INSTEAD OF DELETE
-AS
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM Propiedad p
-        INNER JOIN deleted d ON p.identificacion = d.identificacion
-    )
-    BEGIN
-        RAISERROR('No se puede desactivar el cliente porque tiene propiedades registradas.', 16, 1);
-        ROLLBACK TRANSACTION;
-        RETURN;
-    END;
-
-    -- Si no tiene propiedades, se desactiva el cliente
-    UPDATE Cliente
-    SET estado = 0
-    WHERE identificacion IN (SELECT identificacion FROM deleted);
 END
 GO
 

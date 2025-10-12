@@ -1,4 +1,7 @@
 -- SP_INSERT 
+
+exec sp_insertPropiedad @_ubicacion = 'San Juan', @_precio = 123, @_idEstado =1, @_idTipoInmueble = 2, @_identificacion = 1212121212
+
 USE AltosDelValle
 GO
 create or alter procedure sp_insertPropiedad
@@ -19,7 +22,7 @@ begin try
 
       if @_ubicacion is null or LTRIM(RTRIM(@_ubicacion)) = ''
       begin
-        print 'La ubicaci�n es obligatoria.';
+        print 'La ubicacion es obligatoria.';
         rollback transaction; 
 		return;
       end
@@ -72,7 +75,6 @@ begin try
     commit transaction;
 
     print 'Propiedad registrada correctamente.';
-    select @nuevoIdPropiedad as idPropiedad;
 end try
 
   begin catch
@@ -270,7 +272,7 @@ begin
     print 'Error: ' + ERROR_MESSAGE();
   end catch
 end 
-
+go
 
 -- sp para leer todas las propiedades paginadas y ordenadas
 USE AltosDelValle
