@@ -1,3 +1,7 @@
+use AltosDelValle
+go
+
+
 -- SP_INSERT 
 create or alter procedure sp_insertPropiedad
 	@_ubicacion		varchar(100),
