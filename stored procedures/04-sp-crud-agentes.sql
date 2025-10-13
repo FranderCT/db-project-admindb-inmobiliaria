@@ -174,7 +174,9 @@ BEGIN
 
       SELECT 
         identificacion AS id, 
-        nombre
+        nombre, 
+        apellido1,
+        apellido2
       FROM Agente
       WHERE identificacion = @_identificacion
       ORDER BY nombre ASC;
