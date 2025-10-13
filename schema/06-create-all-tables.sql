@@ -127,10 +127,6 @@ ALTER TABLE Contrato
 ADD CONSTRAINT Fk_ContratoIdAgente
 FOREIGN KEY (idAgente) REFERENCES Agente(identificacion);
 
-ALTER TABLE Contrato
-ADD CONSTRAINT Fk_ContratoIdCondicion
-FOREIGN KEY (idCondicion) REFERENCES TerminosCondiciones(idCondicion);
-
 -- CHECKS
 ALTER TABLE Contrato 
 ADD CONSTRAINT ck_ContratoFechasOrden
