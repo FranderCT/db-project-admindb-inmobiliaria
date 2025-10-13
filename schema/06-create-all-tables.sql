@@ -1,4 +1,6 @@
 -- CREACION DE TODAS LAS TABLAS
+use AltosDelValle
+go
 
 -- CLIENTE
 CREATE TABLE Cliente (
@@ -52,6 +54,7 @@ CREATE TABLE Agente (
     nombre VARCHAR(30) NOT NULL,
     apellido1 VARCHAR(30) NOT NULL,
     apellido2 VARCHAR(30) NULL,
+    telefono VARCHAR(30) NOT NULL,
     comisionAcumulada DECIMAL(18, 2) NOT NULL DEFAULT 0,
     estado BIT NOT NULL DEFAULT 1
 );
@@ -107,7 +110,6 @@ CREATE TABLE Contrato(
 	idTipoContrato INT NOT NULL,
 	idPropiedad INT NOT NULL, 
 	idAgente INT NOT NULL, 
-	idCondicion INT NOT NULL,
     CONSTRAINT pk_ContratoIdContrato PRIMARY KEY (idContrato)
 ) ON Contratos;
 GO
@@ -171,10 +173,6 @@ ADD CONSTRAINT CK_Contrato_IdPropiedad_Pos CHECK (idPropiedad IS NULL OR idPropi
 
 ALTER TABLE Contrato 
 ADD CONSTRAINT CK_Contrato_IdAgente_Pos CHECK (idAgente IS NULL OR idAgente > 0);
-
-ALTER TABLE Contrato 
-ADD CONSTRAINT CK_Contrato_IdCondicion_Pos CHECK (idCondicion IS NULL OR idCondicion > 0);
-GO
 
 -- CLIENTE CONTRATO (Cliente, TipoRol, Contrato)
 CREATE TABLE ClienteContrato (
@@ -254,4 +252,5 @@ CREATE TABLE FacturaCliente (
     CONSTRAINT FK_FacturaCliente_Factura FOREIGN KEY (idFactura) REFERENCES Factura(idFactura)
 );
 GO
+
 

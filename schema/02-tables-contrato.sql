@@ -9,8 +9,7 @@ create table Contrato(
 	fechaPago datetime not null,
 	idTipoContrato int not null,
 	idPropiedad int not null, 
-	idAgente int not null, 
-	idCondicion int not null
+	idAgente int not null
 )on Contratos
 go
 
