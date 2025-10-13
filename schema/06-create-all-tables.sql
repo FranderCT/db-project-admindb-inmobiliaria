@@ -114,6 +114,15 @@ CREATE TABLE Contrato(
 ) ON Contratos;
 GO
 
+------ SE AGREGAN NUEVAS COLUMNAS A LA TABLA CONTRATO PARA GESTIONAR MONTOS Y COMISIONES
+ALTER TABLE Contrato
+ADD 
+    montoTotal MONEY NULL,              -- precio final (venta) o mensualidad (alquiler)
+    deposito MONEY NULL,                -- depósito (si aplica, solo en alquiler)
+    porcentajeComision DECIMAL(5,2) NULL, -- porcentaje de comisión del agente ejemplo (5.00 = 5%)
+    estado NVARCHAR(30) DEFAULT 'Pendiente'; -- estado del contrato (Pendiente, Activo, Finalizado, Cancelado)
+GO
+
 -- FOREIGN KEYS
 ALTER TABLE Contrato
 ADD CONSTRAINT Fk_ContratoIdTipoContrato

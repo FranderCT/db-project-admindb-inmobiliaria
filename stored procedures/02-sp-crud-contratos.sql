@@ -7,91 +7,71 @@ CREATE OR ALTER PROCEDURE sp_insertContratoConNuevasCondiciones
     @idTipoContrato INT,
     @idPropiedad INT,
     @idAgente INT,
-    @condiciones NVARCHAR(MAX)  -- JSON con los textos de condiciones
+    @montoTotal MONEY = NULL,
+    @deposito MONEY = NULL,
+    @porcentajeComision DECIMAL(5,2) = NULL,
+    @estado NVARCHAR(20) = NULL,              -- Nuevo
+    @condiciones NVARCHAR(MAX)
 AS
 BEGIN
     SET NOCOUNT ON;
-
     BEGIN TRY
         BEGIN TRANSACTION;
 
-        -- ✅ Validaciones básicas
-        IF @fechaInicio IS NULL OR @fechaFin IS NULL OR @fechaFirma IS NULL OR @fechaPago IS NULL
-            THROW 50001, 'Todas las fechas son obligatorias.', 1;
-
-        IF @fechaInicio > @fechaFin
-            THROW 50002, 'La fecha de inicio no puede ser posterior a la fecha de fin.', 1;
-
-        IF @fechaFirma > @fechaInicio
-            THROW 50003, 'La fecha de firma no puede ser posterior a la fecha de inicio.', 1;
-
-        IF NOT EXISTS (SELECT 1 FROM TipoContrato WHERE idTipoContrato = @idTipoContrato)
-            THROW 50004, 'Tipo de contrato no existe.', 1;
-
-        IF NOT EXISTS (SELECT 1 FROM Propiedad WHERE idPropiedad = @idPropiedad)
-            THROW 50005, 'Propiedad no existe.', 1;
-
-        IF NOT EXISTS (SELECT 1 FROM Agente WHERE identificacion = @idAgente)
-            THROW 50006, 'Agente no existe.', 1;
-
-        -- ✅ Insertar contrato
         DECLARE @idContrato INT;
+
+        -- Si no se envía estado, se calcula automáticamente
+        IF @estado IS NULL
+        BEGIN
+            IF GETDATE() < @fechaInicio
+                SET @estado = 'Pendiente';
+            ELSE IF GETDATE() BETWEEN @fechaInicio AND @fechaFin
+                SET @estado = 'Activo';
+            ELSE
+                SET @estado = 'Finalizado';
+        END;
 
         INSERT INTO Contrato (
             fechaInicio, fechaFin, fechaFirma, fechaPago,
-            idTipoContrato, idPropiedad, idAgente
+            idTipoContrato, idPropiedad, idAgente,
+            montoTotal, deposito, porcentajeComision, estado
         )
         VALUES (
             @fechaInicio, @fechaFin, @fechaFirma, @fechaPago,
-            @idTipoContrato, @idPropiedad, @idAgente
+            @idTipoContrato, @idPropiedad, @idAgente,
+            @montoTotal, @deposito, @porcentajeComision, @estado
         );
 
         SET @idContrato = SCOPE_IDENTITY();
 
-        -- Insertar condiciones (desde JSON)
-        DECLARE @tmpCondiciones TABLE (texto NVARCHAR(255));  --  nombre único para evitar conflictos
-
+        -- Inserción de condiciones igual que antes
+        DECLARE @tmpCondiciones TABLE (texto NVARCHAR(255));
         INSERT INTO @tmpCondiciones (texto)
-        SELECT value
-        FROM OPENJSON(@condiciones);
+        SELECT value FROM OPENJSON(@condiciones);
 
-        DECLARE @texto NVARCHAR(255);
-        DECLARE @idCondicion INT;
-
-        DECLARE cur CURSOR LOCAL FAST_FORWARD FOR
-            SELECT texto FROM @tmpCondiciones;
+        DECLARE @texto NVARCHAR(255), @idCondicion INT;
+        DECLARE cur CURSOR LOCAL FAST_FORWARD FOR SELECT texto FROM @tmpCondiciones;
 
         OPEN cur;
         FETCH NEXT FROM cur INTO @texto;
-
         WHILE @@FETCH_STATUS = 0
         BEGIN
-            -- Insertar texto de condición
-            INSERT INTO TerminosCondiciones (textoCondicion)
-            VALUES (@texto);
-
+            INSERT INTO TerminosCondiciones (textoCondicion) VALUES (@texto);
             SET @idCondicion = SCOPE_IDENTITY();
-
-            -- Enlazar contrato con la condición
             INSERT INTO ContratoTerminos (idContrato, idCondicion)
             VALUES (@idContrato, @idCondicion);
-
             FETCH NEXT FROM cur INTO @texto;
-        END
+        END;
 
         CLOSE cur;
         DEALLOCATE cur;
 
         COMMIT TRANSACTION;
 
-        SELECT 
-            @idContrato AS idContrato,
-            'Contrato creado correctamente con nuevas condiciones' AS mensaje;
-
+        SELECT @idContrato AS idContrato, 'Contrato creado correctamente' AS mensaje;
     END TRY
     BEGIN CATCH
-        IF XACT_STATE() <> 0 
-            ROLLBACK TRANSACTION;
+        IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
         THROW;
     END CATCH
 END;
@@ -99,146 +79,6 @@ GO
 
 
 -- SP_READ
-CREATE OR ALTER PROCEDURE sp_consultarContrato
-    @_idContrato INT
-AS
-BEGIN
-    BEGIN TRY
-
-        IF NOT EXISTS (SELECT 1 FROM Contrato WHERE idContrato = @_idContrato)
-        BEGIN
-            PRINT 'No existe un contrato con ese ID.';
-            RETURN;
-        END
-
-        SELECT 
-            c.idContrato,
-            c.fechaInicio,
-            c.fechaFin,
-            c.fechaFirma,
-            c.fechaPago,
-            tc.nombre AS TipoContrato,
-            p.ubicacion AS Propiedad,
-            a.nombre AS NombreAgente,
-            a.apellido1 AS ApellidoAgente,
-            tc2.textoCondicion AS Condicion
-        FROM Contrato c
-            INNER JOIN TipoContrato tc ON c.idTipoContrato = tc.idTipoContrato
-            INNER JOIN Propiedad p ON c.idPropiedad = p.idPropiedad
-            INNER JOIN Agente a ON c.idAgente = a.identificacion
-            INNER JOIN ContratoTerminos ct ON c.idContrato = ct.idContrato
-            INNER JOIN TerminosCondiciones tc2 ON ct.idCondicion = tc2.idCondicion
-        WHERE c.idContrato = @_idContrato;
-
-    END TRY
-    BEGIN CATCH
-        PRINT 'Error: ' + ERROR_MESSAGE();
-    END CATCH
-END;
-GO
-
-
--- SP_UPDATE                        
-CREATE OR ALTER PROCEDURE sp_updateContratoConCondiciones
-    @_idContrato      INT,
-    @_fechaInicio     DATETIME,
-    @_fechaFin        DATETIME,
-    @_fechaFirma      DATETIME,
-    @_fechaPago       DATETIME,
-    @_idTipoContrato  INT,
-    @_idPropiedad     INT,
-    @_idAgente        INT,
-    @_condiciones     NVARCHAR(MAX)  -- JSON con textos nuevos
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    BEGIN TRY
-        BEGIN TRANSACTION;
-
-        -- 🔎 Validar existencia
-        IF NOT EXISTS (SELECT 1 FROM Contrato WHERE idContrato = @_idContrato)
-            THROW 50010, 'No existe un contrato con ese ID.', 1;
-
-        -- 🔎 Validaciones de fechas
-        IF @_fechaInicio IS NULL OR @_fechaFin IS NULL OR @_fechaFirma IS NULL OR @_fechaPago IS NULL
-            THROW 50011, 'Todas las fechas son obligatorias.', 1;
-
-        IF @_fechaInicio > @_fechaFin
-            THROW 50012, 'La fecha de inicio no puede ser posterior a la fecha de fin.', 1;
-
-        IF @_fechaFirma > @_fechaInicio
-            THROW 50013, 'La fecha de firma no puede ser posterior a la fecha de inicio.', 1;
-
-        --  Actualizar datos del contrato
-        UPDATE Contrato
-        SET 
-            fechaInicio    = @_fechaInicio,
-            fechaFin       = @_fechaFin,
-            fechaFirma     = @_fechaFirma,
-            fechaPago      = @_fechaPago,
-            idTipoContrato = @_idTipoContrato,
-            idPropiedad    = @_idPropiedad,
-            idAgente       = @_idAgente
-        WHERE idContrato = @_idContrato;
-
-        -- Eliminar vínculos antiguos en ContratoTerminos
-        DELETE FROM ContratoTerminos WHERE idContrato = @_idContrato;
-
-        -- (Opcional) eliminar condiciones viejas si no están asociadas a otros contratos
-        -- DELETE FROM TerminosCondiciones
-        -- WHERE idCondicion NOT IN (SELECT idCondicion FROM ContratoTerminos);
-
-        -- Insertar nuevas condiciones desde JSON
-        DECLARE @tmpCondiciones TABLE (texto NVARCHAR(255));
-        INSERT INTO @tmpCondiciones (texto)
-        SELECT value FROM OPENJSON(@_condiciones);
-
-        DECLARE @texto NVARCHAR(255);
-        DECLARE @idCondicion INT;
-
-        DECLARE cur CURSOR LOCAL FAST_FORWARD FOR
-            SELECT texto FROM @tmpCondiciones;
-
-        OPEN cur;
-        FETCH NEXT FROM cur INTO @texto;
-
-        WHILE @@FETCH_STATUS = 0
-        BEGIN
-            -- Insertar nuevo texto en TerminosCondiciones
-            INSERT INTO TerminosCondiciones (textoCondicion)
-            VALUES (@texto);
-
-            SET @idCondicion = SCOPE_IDENTITY();
-
-            -- Enlazar al contrato
-            INSERT INTO ContratoTerminos (idContrato, idCondicion)
-            VALUES (@_idContrato, @idCondicion);
-
-            FETCH NEXT FROM cur INTO @texto;
-        END
-
-        CLOSE cur;
-        DEALLOCATE cur;
-
-        COMMIT TRANSACTION;
-
-        SELECT 
-            @_idContrato AS idContrato,
-            'Contrato y condiciones actualizados correctamente' AS mensaje;
-
-    END TRY
-    BEGIN CATCH
-        IF XACT_STATE() <> 0 
-            ROLLBACK TRANSACTION;
-        THROW;
-    END CATCH
-END;
-GO
-
--- SP_DELETE
-
-
 -----   sp_consultarContratosConCondiciones
 CREATE OR ALTER PROCEDURE sp_consultarContratosConCondiciones
     @idContrato INT = NULL
@@ -254,10 +94,20 @@ BEGIN
                 c.fechaFin,
                 c.fechaFirma,
                 c.fechaPago,
+
+
+                -- Agregar también los IDs de las tablas relacionadas
+                c.idTipoContrato,
                 tc.nombre AS TipoContrato,
+
+                c.idPropiedad,
                 p.ubicacion AS Propiedad,
+
+                c.idAgente,
                 a.nombre AS NombreAgente,
                 a.apellido1 AS ApellidoAgente,
+
+                -- ondiciones del contrato
                 (
                     SELECT 
                         t.idCondicion,
@@ -268,21 +118,508 @@ BEGIN
                     WHERE ct.idContrato = c.idContrato
                     FOR JSON PATH
                 ) AS condiciones
+
             FROM Contrato c
             INNER JOIN TipoContrato tc ON c.idTipoContrato = tc.idTipoContrato
             INNER JOIN Propiedad p ON c.idPropiedad = p.idPropiedad
             INNER JOIN Agente a ON c.idAgente = a.identificacion
             WHERE (@idContrato IS NULL OR c.idContrato = @idContrato)
             FOR JSON PATH, INCLUDE_NULL_VALUES
-        ) AS data; -- 👈 alias para el JSON
+        ) AS data;
     END TRY
     BEGIN CATCH
         DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
         RAISERROR(@ErrorMessage, 16, 1);
     END CATCH
+END
+GO
+
+
+-- SP_UPDATE                        
+CREATE OR ALTER PROCEDURE sp_updateContratoConCondiciones
+    @_idContrato INT,
+    @_fechaInicio DATETIME = NULL,
+    @_fechaFin DATETIME = NULL,
+    @_fechaFirma DATETIME = NULL,
+    @_fechaPago DATETIME = NULL,
+    @_idTipoContrato INT = NULL,
+    @_idPropiedad INT = NULL,
+    @_idAgente INT = NULL,
+    @_montoTotal MONEY = NULL,
+    @_deposito MONEY = NULL,
+    @_porcentajeComision DECIMAL(5,2) = NULL,
+    @_estado NVARCHAR(20) = NULL,
+    @_condiciones NVARCHAR(MAX) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        --  Actualiza solo los campos enviados (mantiene los existentes si llegan NULL)
+        UPDATE Contrato
+        SET 
+            fechaInicio = ISNULL(@_fechaInicio, fechaInicio),
+            fechaFin = ISNULL(@_fechaFin, fechaFin),
+            fechaFirma = ISNULL(@_fechaFirma, fechaFirma),
+            fechaPago = ISNULL(@_fechaPago, fechaPago),
+            idTipoContrato = ISNULL(@_idTipoContrato, idTipoContrato),
+            idPropiedad = ISNULL(@_idPropiedad, idPropiedad),
+            idAgente = ISNULL(@_idAgente, idAgente),
+            montoTotal = ISNULL(@_montoTotal, montoTotal),
+            deposito = ISNULL(@_deposito, deposito),
+            porcentajeComision = ISNULL(@_porcentajeComision, porcentajeComision),
+            estado = ISNULL(@_estado, estado)
+        WHERE idContrato = @_idContrato;
+
+        -- 🔹 Si hay condiciones nuevas, reemplazarlas
+        IF @_condiciones IS NOT NULL
+        BEGIN
+            DELETE FROM ContratoTerminos WHERE idContrato = @_idContrato;
+
+            DECLARE @tmpCondiciones TABLE (texto NVARCHAR(255));
+            INSERT INTO @tmpCondiciones (texto)
+            SELECT value FROM OPENJSON(@_condiciones);
+
+            DECLARE @texto NVARCHAR(255), @idCondicion INT;
+
+            DECLARE cur CURSOR LOCAL FAST_FORWARD FOR SELECT texto FROM @tmpCondiciones;
+            OPEN cur;
+            FETCH NEXT FROM cur INTO @texto;
+
+            WHILE @@FETCH_STATUS = 0
+            BEGIN
+                INSERT INTO TerminosCondiciones (textoCondicion)
+                VALUES (@texto);
+
+                SET @idCondicion = SCOPE_IDENTITY();
+
+                INSERT INTO ContratoTerminos (idContrato, idCondicion)
+                VALUES (@_idContrato, @idCondicion);
+
+                FETCH NEXT FROM cur INTO @texto;
+            END;
+
+            CLOSE cur;
+            DEALLOCATE cur;
+        END;
+
+        COMMIT TRANSACTION;
+
+        SELECT @_idContrato AS idContrato, 'Contrato actualizado correctamente' AS mensaje;
+
+    END TRY
+    BEGIN CATCH
+        IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
 END;
 GO
 
+-- SP_DELETE
+
+
+------   sp_detalleContrato
+CREATE OR ALTER PROCEDURE sp_detalleContrato
+  @idContrato INT
+AS
+BEGIN
+  SET NOCOUNT ON;
+
+  DECLARE @json NVARCHAR(MAX) = '';
+
+  SELECT @json = (
+    SELECT 
+      c.idContrato,
+      c.fechaInicio,
+      c.fechaFin,
+      c.fechaFirma,
+      c.fechaPago,
+      c.montoTotal,
+      c.deposito,
+      c.porcentajeComision,
+      c.estado, 
+
+      c.idTipoContrato,
+      tc.nombre AS tipoContrato,
+
+      c.idPropiedad,
+      c.idAgente,
+
+      -- Propiedad asociada
+      JSON_QUERY((
+        SELECT 
+          p.idPropiedad,
+          p.ubicacion,
+          p.precio,
+          ep.idEstadoPropiedad,
+          ep.nombre AS nombreEstadoPropiedad,
+          ti.idTipoInmueble,
+          ti.nombre AS nombreTipoInmueble
+        FROM Propiedad p
+        INNER JOIN EstadoPropiedad ep ON ep.idEstadoPropiedad = p.idEstado
+        INNER JOIN TipoInmueble ti ON ti.idTipoInmueble = p.idTipoInmueble
+        WHERE p.idPropiedad = c.idPropiedad
+        FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+      )) AS propiedad,
+
+      -- Participantes
+      JSON_QUERY((
+        SELECT 
+          cc.identificacion,
+          cl.nombre,
+          cl.apellido1,
+          cl.apellido2,
+          tr.idRol,
+          tr.nombre AS rol
+        FROM ClienteContrato cc
+        INNER JOIN Cliente cl ON cl.identificacion = cc.identificacion
+        INNER JOIN TipoRol tr ON tr.idRol = cc.idRol
+        WHERE cc.idContrato = c.idContrato
+        FOR JSON PATH
+      )) AS participantes,
+
+      -- Condiciones
+      JSON_QUERY((
+        SELECT 
+          t.idCondicion,
+          t.textoCondicion
+        FROM ContratoTerminos ct
+        INNER JOIN TerminosCondiciones t ON t.idCondicion = ct.idCondicion
+        WHERE ct.idContrato = c.idContrato
+        FOR JSON PATH
+      )) AS condiciones
+
+    FROM Contrato c
+    INNER JOIN TipoContrato tc ON c.idTipoContrato = tc.idTipoContrato
+    WHERE c.idContrato = @idContrato
+    FOR JSON PATH, INCLUDE_NULL_VALUES
+  );
+
+  IF @json IS NULL OR LEN(@json) = 0
+    SET @json = '[]';
+
+  SELECT @json AS data;
+END;
+GO
+
+----  sp_consultarContratosDetalleGeneral
+CREATE OR ALTER PROCEDURE sp_detalleGeneralContrato
+  @idContrato INT
+AS
+BEGIN
+  SET NOCOUNT ON;
+
+  DECLARE @json NVARCHAR(MAX);
+
+  SELECT @json = (
+    SELECT 
+      c.idContrato,
+      c.fechaInicio,
+      c.fechaFin,
+      c.fechaFirma,
+      c.fechaPago,
+      tc.nombre AS tipoContrato,
+
+      -- Propiedad (con cliente propietario)
+      JSON_QUERY((
+        SELECT 
+          p.idPropiedad,
+          p.ubicacion,
+          p.precio,
+          ep.idEstadoPropiedad,
+          ep.nombre AS estadoPropiedad,
+          ti.idTipoInmueble,
+          ti.nombre AS tipoInmueble,
+          JSON_QUERY((
+            SELECT 
+              cli.identificacion,
+              cli.nombre,
+              cli.apellido1,
+              cli.apellido2,
+              cli.telefono,
+              cli.estado
+            FROM Cliente cli
+            WHERE cli.identificacion = p.identificacion
+            FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+          )) AS cliente
+        FROM Propiedad p
+        INNER JOIN EstadoPropiedad ep ON ep.idEstadoPropiedad = p.idEstado
+        INNER JOIN TipoInmueble ti ON ti.idTipoInmueble = p.idTipoInmueble
+        WHERE p.idPropiedad = c.idPropiedad
+        FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+      )) AS propiedad,
+
+      -- Agente
+      JSON_QUERY((
+        SELECT 
+          a.identificacion,
+          a.nombre,
+          a.apellido1,
+          a.apellido2,
+          a.comisionAcumulada
+        FROM Agente a
+        WHERE a.identificacion = c.idAgente
+        FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+      )) AS agente,
+
+      -- Participantes del contrato
+      JSON_QUERY((
+        SELECT 
+          cl.identificacion,
+          cl.nombre,
+          cl.apellido1,
+          cl.apellido2,
+          tr.idRol,
+          tr.nombre AS rol
+        FROM ClienteContrato cc
+        INNER JOIN Cliente cl ON cl.identificacion = cc.identificacion
+        INNER JOIN TipoRol tr ON tr.idRol = cc.idRol
+        WHERE cc.idContrato = c.idContrato
+        FOR JSON PATH
+      )) AS participantes,
+
+      --  Condiciones del contrato
+      JSON_QUERY((
+        SELECT 
+          t.idCondicion,
+          t.textoCondicion
+        FROM ContratoTerminos ct
+        INNER JOIN TerminosCondiciones t ON t.idCondicion = ct.idCondicion
+        WHERE ct.idContrato = c.idContrato
+        FOR JSON PATH
+      )) AS condiciones
+
+    FROM Contrato c
+    INNER JOIN TipoContrato tc ON tc.idTipoContrato = c.idTipoContrato
+    WHERE c.idContrato = @idContrato
+    FOR JSON PATH, INCLUDE_NULL_VALUES
+  );
+
+  IF @json IS NULL OR LEN(@json) = 0
+    SET @json = '[]';
+
+  SELECT @json AS data;
+END
+GO
+
+---- sp_detalleGeneralContrato
+CREATE OR ALTER PROCEDURE sp_detalleGeneralContrato
+  @idContrato INT
+AS
+BEGIN
+  SET NOCOUNT ON;
+
+  DECLARE @json NVARCHAR(MAX);
+
+  SELECT @json = (
+    SELECT 
+      c.idContrato,
+      c.fechaInicio,
+      c.fechaFin,
+      c.fechaFirma,
+      c.fechaPago,
+      c.montoTotal,
+      c.deposito,
+      c.porcentajeComision,
+      c.estado, 
+
+      c.idTipoContrato,
+      tc.nombre AS tipoContrato,
+
+      c.idPropiedad,
+      c.idAgente,
+
+
+      -- Propiedad (con cliente propietario)
+      JSON_QUERY((
+        SELECT 
+          p.idPropiedad,
+          p.ubicacion,
+          p.precio,
+          ep.idEstadoPropiedad,
+          ep.nombre AS estadoPropiedad,
+          ti.idTipoInmueble,
+          ti.nombre AS tipoInmueble,
+          JSON_QUERY((
+            SELECT 
+              cli.identificacion,
+              cli.nombre,
+              cli.apellido1,
+              cli.apellido2,
+              cli.telefono,
+              cli.estado
+            FROM Cliente cli
+            WHERE cli.identificacion = p.identificacion
+            FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+          )) AS cliente
+        FROM Propiedad p
+        INNER JOIN EstadoPropiedad ep ON ep.idEstadoPropiedad = p.idEstado
+        INNER JOIN TipoInmueble ti ON ti.idTipoInmueble = p.idTipoInmueble
+        WHERE p.idPropiedad = c.idPropiedad
+        FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+      )) AS propiedad,
+
+      --  Agente
+      JSON_QUERY((
+        SELECT 
+          a.identificacion,
+          a.nombre,
+          a.apellido1,
+          a.apellido2,
+          a.comisionAcumulada
+        FROM Agente a
+        WHERE a.identificacion = c.idAgente
+        FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+      )) AS agente,
+
+      -- Participantes
+      JSON_QUERY((
+        SELECT 
+          cl.identificacion,
+          cl.nombre,
+          cl.apellido1,
+          cl.apellido2,
+          tr.idRol,
+          tr.nombre AS rol
+        FROM ClienteContrato cc
+        INNER JOIN Cliente cl ON cl.identificacion = cc.identificacion
+        INNER JOIN TipoRol tr ON tr.idRol = cc.idRol
+        WHERE cc.idContrato = c.idContrato
+        FOR JSON PATH
+      )) AS participantes,
+
+      -- Condiciones
+      JSON_QUERY((
+        SELECT 
+          t.idCondicion,
+          t.textoCondicion
+        FROM ContratoTerminos ct
+        INNER JOIN TerminosCondiciones t ON t.idCondicion = ct.idCondicion
+        WHERE ct.idContrato = c.idContrato
+        FOR JSON PATH
+      )) AS condiciones
+
+    FROM Contrato c
+    INNER JOIN TipoContrato tc ON tc.idTipoContrato = c.idTipoContrato
+    WHERE c.idContrato = @idContrato
+    FOR JSON PATH, INCLUDE_NULL_VALUES
+  );
+
+  IF @json IS NULL OR LEN(@json) = 0
+    SET @json = '[]';
+
+  SELECT @json AS data;
+END;
+GO
+
+---- sp_detalleGeneralContratos
+CREATE OR ALTER PROCEDURE sp_detalleGeneralContratos
+AS
+BEGIN
+  SET NOCOUNT ON;
+
+  DECLARE @json NVARCHAR(MAX);
+
+  SELECT @json = (
+    SELECT 
+      c.idContrato,
+      c.fechaInicio,
+      c.fechaFin,
+      c.fechaFirma,
+      c.fechaPago,
+      c.montoTotal,
+      c.deposito,
+      c.porcentajeComision,
+      c.estado, 
+
+      c.idTipoContrato,
+      tc.nombre AS tipoContrato,
+
+      c.idPropiedad,
+      c.idAgente,
+
+      --  Propiedad (con cliente propietario)
+      JSON_QUERY((
+        SELECT 
+          p.idPropiedad,
+          p.ubicacion,
+          p.precio,
+          ep.idEstadoPropiedad,
+          ep.nombre AS estadoPropiedad,
+          ti.idTipoInmueble,
+          ti.nombre AS tipoInmueble,
+          JSON_QUERY((
+            SELECT 
+              cli.identificacion,
+              cli.nombre,
+              cli.apellido1,
+              cli.apellido2,
+              cli.telefono,
+              cli.estado
+            FROM Cliente cli
+            WHERE cli.identificacion = p.identificacion
+            FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+          )) AS cliente
+        FROM Propiedad p
+        INNER JOIN EstadoPropiedad ep ON ep.idEstadoPropiedad = p.idEstado
+        INNER JOIN TipoInmueble ti ON ti.idTipoInmueble = p.idTipoInmueble
+        WHERE p.idPropiedad = c.idPropiedad
+        FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+      )) AS propiedad,
+
+      -- Agente
+      JSON_QUERY((
+        SELECT 
+          a.identificacion,
+          a.nombre,
+          a.apellido1,
+          a.apellido2,
+          a.comisionAcumulada
+        FROM Agente a
+        WHERE a.identificacion = c.idAgente
+        FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+      )) AS agente,
+
+      -- Participantes
+      JSON_QUERY((
+        SELECT 
+          cl.identificacion,
+          cl.nombre,
+          cl.apellido1,
+          cl.apellido2,
+          tr.idRol,
+          tr.nombre AS rol
+        FROM ClienteContrato cc
+        INNER JOIN Cliente cl ON cl.identificacion = cc.identificacion
+        INNER JOIN TipoRol tr ON tr.idRol = cc.idRol
+        WHERE cc.idContrato = c.idContrato
+        FOR JSON PATH
+      )) AS participantes,
+
+      --  Condiciones
+      JSON_QUERY((
+        SELECT 
+          t.idCondicion,
+          t.textoCondicion
+        FROM ContratoTerminos ct
+        INNER JOIN TerminosCondiciones t ON t.idCondicion = ct.idCondicion
+        WHERE ct.idContrato = c.idContrato
+        FOR JSON PATH
+      )) AS condiciones
+
+    FROM Contrato c
+    INNER JOIN TipoContrato tc ON tc.idTipoContrato = c.idTipoContrato
+    FOR JSON PATH, INCLUDE_NULL_VALUES
+  );
+
+  IF @json IS NULL OR LEN(@json) = 0
+    SET @json = '[]';
+
+  SELECT @json AS data;
+END;
+GO
 
 
 
@@ -290,7 +627,7 @@ GO
 INSERT INTO TipoContrato (nombre) VALUES ('Venta'), ('Alquiler');
 GO
 
----TABLA TIPO CONTRATOS
+---TABLA TIPO CONTRATO
 
 ---sp_insertTipoContrato
 CREATE OR ALTER PROCEDURE sp_insertTipoContrato
@@ -341,7 +678,6 @@ BEGIN
 END;
 GO
 
-
 ---sp_updateTipoContrato
 CREATE OR ALTER PROCEDURE sp_updateTipoContrato
   @idTipoContrato INT,
@@ -368,7 +704,6 @@ BEGIN
 END;
 GO
 
-
 ---sp_deleteTipoContrato
 CREATE OR ALTER PROCEDURE sp_deleteTipoContrato
   @idTipoContrato INT
@@ -393,17 +728,5 @@ END;
 GO
 
 
-SELECT * FROM TipoContrato
 
-ALTER TABLE Contrato DROP COLUMN idCondicion;
-
--- Eliminar restricción CHECK si existe
-ALTER TABLE Contrato
-DROP CONSTRAINT CK_Contrato_IdCondicion_Pos;
-GO
-
--- Eliminar FOREIGN KEY que apunta a TerminosCondiciones
-ALTER TABLE Contrato
-DROP CONSTRAINT Fk_ContratoIdCondicion;
-GO
 
