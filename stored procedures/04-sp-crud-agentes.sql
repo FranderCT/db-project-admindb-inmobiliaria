@@ -2,38 +2,38 @@
 USE AltosDelValle
 GO
 create or alter procedure dbo.sp_InsertAgente
-  @_identificacion      INT, 
-  @_nombre             varchar(30),
-  @_apellido1          varchar(30),
-  @_apellido2          varchar(30) = NULL,
-  @_telefono            varchar(30)
+  @identificacion      INT, 
+  @nombre             varchar(30),
+  @apellido1          varchar(30),
+  @apellido2          varchar(30) = NULL,
+  @telefono            varchar(30)
   
 as 
 BEGIN
   SET NOCOUNT ON;
 
   BEGIN TRY
-    IF EXISTS (SELECT 1 FROM Agente WHERE identificacion = @_identificacion)
+    IF EXISTS (SELECT 1 FROM Agente WHERE identificacion = @identificacion)
       THROW 50010, 'La identificación ya está registrada.', 1;
       
-    IF @_identificacion IS NULL OR @_identificacion <= 0
+    IF @identificacion IS NULL OR @identificacion <= 0
       THROW 50011, 'La identificación es obligatoria y debe ser > 0.', 1;
 
-    IF @_nombre IS NULL OR LTRIM(RTRIM(@_nombre)) = ''
+    IF @nombre IS NULL OR LTRIM(RTRIM(@nombre)) = ''
       THROW 50012, 'El nombre es obligatorio.', 1;
 
-    IF @_apellido1 IS NULL OR LTRIM(RTRIM(@_apellido1)) = ''
+    IF @apellido1 IS NULL OR LTRIM(RTRIM(@apellido1)) = ''
       THROW 50013, 'El primer apellido es obligatorio.', 1;
 
-    IF @_telefono IS NULL OR LTRIM(RTRIM(@_telefono)) = ''
+    IF @telefono IS NULL OR LTRIM(RTRIM(@telefono)) = ''
       THROW 50014, 'El teléfono es obligatorio.', 1;
 
     INSERT INTO Agente (identificacion, nombre, apellido1, apellido2, telefono)
-    VALUES (@_identificacion, @_nombre, @_apellido1, @_apellido2, @_telefono);
+    VALUES (@identificacion, @nombre, @apellido1, @apellido2, @telefono);
 
     SELECT identificacion, nombre, apellido1, apellido2, telefono, estado
     FROM Agente
-    WHERE identificacion = @_identificacion;
+    WHERE identificacion = @identificacion;
   END TRY
   BEGIN CATCH
     DECLARE @num INT = ERROR_NUMBER(),
