@@ -6,14 +6,14 @@ GO
 CREATE DATABASE AltosDelValle
 ON PRIMARY (
     NAME = 'AltosDelValle_Data',
-    FILENAME = 'C:\SQLData\AltosDelValle_Data.mdf',
+    FILENAME = '/var/opt/mssql/data/AltosDelValle_Data.mdf',
     SIZE = 1024MB,
     MAXSIZE = 6000MB,    
     FILEGROWTH = 128MB   
 )
 LOG ON (
     NAME = 'AltosDelValle_Log',
-    FILENAME = 'C:\SQLLog\AltosDelValle_Log.ldf',
+    FILENAME = '/var/opt/mssql/log/AltosDelValle_Log.ldf',
     SIZE = 512MB,        
     MAXSIZE = 3000MB,    
     FILEGROWTH = 128MB
@@ -50,7 +50,7 @@ GO
 ALTER DATABASE AltosDelValle
 ADD FILE (
     NAME = 'Clientes_Data',
-    FILENAME = 'C:\SQLData\Clientes_Data.ndf',
+    FILENAME = '/var/opt/mssql/data/Clientes_Data.ndf',
     SIZE = 500MB,
     MAXSIZE = 1500MB,
     FILEGROWTH = 100MB
@@ -61,7 +61,7 @@ GO
 ALTER DATABASE AltosDelValle
 ADD FILE (
     NAME = 'Propiedades_Data',
-    FILENAME = 'C:\SQLData\Propiedades_Data.ndf',
+    FILENAME = '/var/opt/mssql/data/Propiedades_Data.ndf',
     SIZE = 500MB,
     MAXSIZE = 1500MB,
     FILEGROWTH = 100MB
@@ -72,7 +72,7 @@ GO
 ALTER DATABASE AltosDelValle
 ADD FILE (
     NAME = 'Contratos_Data',
-    FILENAME = 'C:\SQLData\Contratos_Data.ndf',
+    FILENAME = '/var/opt/mssql/data/Contratos_Data.ndf',
     SIZE = 1000MB,
     MAXSIZE = 2000MB,
     FILEGROWTH = 200MB
@@ -83,7 +83,7 @@ GO
 ALTER DATABASE AltosDelValle
 ADD FILE (
     NAME = 'Facturas_Data',
-    FILENAME = 'C:\SQLData\Facturas_Data.ndf',
+    FILENAME = '/var/opt/mssql/data/Facturas_Data.ndf',
     SIZE = 1000MB,
     MAXSIZE = 2000MB,
     FILEGROWTH = 200MB
