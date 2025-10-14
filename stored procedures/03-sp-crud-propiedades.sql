@@ -1,82 +1,58 @@
 -- SP_INSERT 
+use AltosDelValle
+go
 create or alter procedure sp_insertPropiedad
-	@_ubicacion		varchar(100),
-	@_precio         money,
-	@_idEstado       int,
-	@_idTipoInmueble int,
-	@_identificacion int
+	@ubicacion		varchar(100),
+	@precio         money,
+	@idEstado       int,
+	@idTipoInmueble int,
+	@identificacion int
 as
 begin
-begin try
-    begin transaction;
+  set nocount on;
 
-      declare @existeEstado int;
-      declare @existeTipo int;
-      declare @existeCliente int;
-      declare @nuevoIdPropiedad int;
+  -- validar que idTipoInmueble exista
+  declare @existeTipo int;
+  select @existeTipo = idTipoInmueble
+  from TipoInmueble
+  where idTipoInmueble = @idTipoInmueble;
 
-      if @_ubicacion is null or LTRIM(RTRIM(@_ubicacion)) = ''
-      begin
-        print 'La ubicacion es obligatoria.';
-        rollback transaction; 
-		return;
-      end
+  if @existeTipo is null
+  begin
+    print 'Ese tipo de inmueble no existe.';
+    return;
+  end
 
-      if @_precio is null or @_precio <= 0
-      begin
-        print 'El precio debe ser mayor a 0.';
-        rollback transaction; 
-		return;
-      end
+  -- validar que idEstado exista
+  declare @existeEstado int;
+  select @existeEstado = idEstadoPropiedad
+  from EstadoPropiedad
+  where idEstadoPropiedad = @idEstado;
 
-      select @existeEstado = idEstadoPropiedad
-		  from EstadoPropiedad
-		  where idEstadoPropiedad = @_idEstado;
+  if @existeEstado is null
+  begin
+    print 'Ese estado no existe.';
+    return;
+  end
+  -- validar que identificacion exista
+  declare @existeCliente int;
+  select @existeCliente = identificacion
+  from Cliente
+  where identificacion = @identificacion;
 
-      if @existeEstado is null
-      begin
-        print 'Ese estado no existe.';
-        rollback transaction; 
-		return;
-      end
+  if @existeCliente is null
+  begin
+    print 'No existe un cliente con esa identificacion.';
+    return;
+  end
 
-      select @existeTipo = idTipoInmueble
-		  from TipoInmueble
-		  where idTipoInmueble = @_idTipoInmueble;
+  -- insertamos la propiedad
+  insert into Propiedad (ubicacion, precio, idEstado, idTipoInmueble, identificacion)
+  values (@ubicacion, @precio, @idEstado, @idTipoInmueble, @identificacion);
+  print 'Propiedad insertada correctamente.';
+  select * from Propiedad where idPropiedad = SCOPE_IDENTITY();
 
-      if @existeTipo is null
-      begin
-        print 'Ese tipo de inmueble no existe.';
-        rollback transaction; 
-		return;
-      end
-
-      select @existeCliente = identificacion
-		  from Cliente
-		  where identificacion = @_identificacion;
-
-      if @existeCliente is null
-      begin
-        print 'No existe un cliente con esa identificaci�n.';
-        rollback transaction; 
-		return;
-      end
-
-      insert into Propiedad
-        (ubicacion, precio, idEstado, idTipoInmueble, identificacion)
-      values
-        (@_ubicacion, @_precio, @_idEstado, @_idTipoInmueble, @_identificacion);
-
-    commit transaction;
-
-    print 'Propiedad registrada correctamente.';
-end try
-
-  begin catch
-    if XACT_STATE() <> 0 rollback transaction;
-    print 'Error: ' + ERROR_MESSAGE();
-  end catch
-end 
+end
 go
 
 -- SP_READ BY ID

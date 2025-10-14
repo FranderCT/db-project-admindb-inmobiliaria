@@ -51,9 +51,8 @@ END
 GO
 
 
-use AltosDelValle;
+USE AltosDelValle;
 GO
- -- SP_READ con paginación, ordenamiento y filtros
 CREATE OR ALTER PROCEDURE dbo.sp_cliente_paginar_orden
   @page     INT = 1,
   @limit    INT = 10,
@@ -65,17 +64,17 @@ AS
 BEGIN
   SET NOCOUNT ON;
 
-  -- Sanitización
+  -- Saneos
   IF @page  < 1 SET @page  = 1;
   IF @limit < 1 SET @limit = 10;
+  IF @limit > 100 SET @limit = 100;         -- (opcional) cap
   IF @sortDir NOT IN ('ASC','DESC') SET @sortDir = 'ASC';
   IF @sortCol NOT IN ('identificacion','nombre','apellido1','telefono','estado')
     SET @sortCol = 'identificacion';
 
   DECLARE @offset INT = (@page - 1) * @limit;
 
-  DECLARE @sql NVARCHAR(MAX) =
-  N'
+  DECLARE @sql NVARCHAR(MAX) = N'
   -- datos paginados
   SELECT identificacion, nombre, apellido1, apellido2, telefono, estado
   FROM dbo.Cliente
@@ -83,14 +82,17 @@ BEGIN
   ORDER BY ' + QUOTENAME(@sortCol) + N' ' + @sortDir + N'
   OFFSET @o ROWS FETCH NEXT @l ROWS ONLY;
 
-  -- metadatos de paginación
+  -- metadatos de paginación (mismo WHERE)
   SELECT 
       COUNT(*) AS total,
       @p       AS page,
       @l       AS limit,
-      ( (CAST(COUNT(*) AS INT) + @l - 1) / @l ) AS pageCount,
-      CASE WHEN (@p * @l) < COUNT(*) THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS hasNextPage,
-      CASE WHEN @p > 1 THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS hasPrevPage
+      CASE 
+        WHEN COUNT(*) = 0 THEN 0
+        ELSE CEILING( (COUNT(*) * 1.0) / @l )
+      END AS pageCount,
+      CASE WHEN @o > 0 THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS hasPrevPage,
+      CASE WHEN (@o + @l) < COUNT(*) THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS hasNextPage
   FROM dbo.Cliente
   /**WHERE**/;';
 
@@ -125,6 +127,7 @@ BEGIN
 
   SET @sql = REPLACE(@sql, N'/**WHERE**/', @where);
 
+  -- Bind de parámetros según corresponda
   IF @q IS NOT NULL AND LTRIM(RTRIM(@q)) <> N'' AND @estado IS NOT NULL
     EXEC sp_executesql
       @sql,
@@ -147,6 +150,7 @@ BEGIN
       @o=@offset, @l=@limit, @p=@page;
 END
 GO
+
 
 -- sp leer todos los clientes 
 CREATE OR ALTER PROCEDURE dbo.sp_cliente_leer_todos
@@ -182,15 +186,63 @@ BEGIN
 END
 GO
 
-
-SELECT * FROM Cliente;
-GO
-
 USE AltosDelValle;
 GO
 
+-- sp para actualizar cliente
+CREATE OR ALTER PROCEDURE dbo.sp_cliente_actualizar
+  @identificacion INT,
+  @nombre         VARCHAR(30) = NULL,
+  @apellido1      VARCHAR(30) = NULL,
+  @apellido2      VARCHAR(30) = NULL,
+  @telefono       VARCHAR(30) = NULL,
+  @estado         BIT = NULL
+AS
+BEGIN
+  SET NOCOUNT ON;
+  
+  IF @identificacion IS NULL OR @identificacion <= 0
+      THROW 50020, 'La identificación es obligatoria y debe ser > 0.', 1;
 
+  IF NOT EXISTS (SELECT 1 FROM dbo.Cliente WHERE identificacion = @identificacion)
+      THROW 50030, 'Cliente no encontrado.', 1;
 
+  -- Actualizar los campos que no son nulos
+  UPDATE dbo.Cliente
+  SET
+    nombre = COALESCE(@nombre, nombre),
+    apellido1 = COALESCE(@apellido1, apellido1),
+    apellido2 = COALESCE(@apellido2, apellido2),
+    telefono = COALESCE(@telefono, telefono),
+    estado = COALESCE(@estado, estado)
+  WHERE identificacion = @identificacion;
+
+  select identificacion, nombre, apellido1, apellido2, telefono, estado
+  from dbo.Cliente
+  where identificacion = @identificacion;
+
+END
+GO
+
+-- sp actualizar estado del cliente
+CREATE OR ALTER PROCEDURE dbo.sp_cliente_actualizar_estado
+  @identificacion INT,
+  @estado         BIT
+AS
+BEGIN
+  SET NOCOUNT ON;
+
+  IF @identificacion IS NULL OR @identificacion <= 0
+      RAISERROR('La identificación es obligatoria y debe ser > 0.', 16, 1);
+
+  IF NOT EXISTS (SELECT 1 FROM dbo.Cliente WHERE identificacion = @identificacion)
+      RAISERROR('Cliente no encontrado.', 16, 1);
+
+  UPDATE dbo.Cliente
+  SET estado = @estado
+  WHERE identificacion = @identificacion;
+END
+GO
 
 ---TABLA INTERMEDIA ClienteContrato
 
