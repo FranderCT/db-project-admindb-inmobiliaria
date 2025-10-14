@@ -120,7 +120,8 @@ ADD
     montoTotal MONEY NULL,              -- precio final (venta) o mensualidad (alquiler)
     deposito MONEY NULL,                -- depósito (si aplica, solo en alquiler)
     porcentajeComision DECIMAL(5,2) NULL, -- porcentaje de comisión del agente ejemplo (5.00 = 5%)
-    estado NVARCHAR(30) DEFAULT 'Pendiente'; -- estado del contrato (Pendiente, Activo, Finalizado, Cancelado)
+    estado NVARCHAR(30) DEFAULT 'Pendiente', -- estado del contrato (Pendiente, Activo, Finalizado, Cancelado)
+    idCondicion INT NULL                  -- referencia a términos y condiciones (si aplica)
 GO
 
 -- FOREIGN KEYS
