@@ -1,7 +1,7 @@
 -- SP_INSERT 
 USE AltosDelValle
 GO
-create or alter procedure dbo.sp_InsertAgente
+create or alter procedure dbo.sp_insertAgente
   @identificacion      INT, 
   @nombre             varchar(30),
   @apellido1          varchar(30),
@@ -54,7 +54,7 @@ go
 USE AltosDelValle
 GO
 
-CREATE OR ALTER PROCEDURE dbo.sp_VerTodosLosAgentes
+CREATE OR ALTER PROCEDURE dbo.sp_viewAllAgentes
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -74,7 +74,7 @@ GO
 USE AltosDelValle;
 GO
 
-CREATE OR ALTER PROCEDURE dbo.sp_Agente_ObtenerPorId
+CREATE OR ALTER PROCEDURE dbo.sp_getByIdAgente
   @_identificacion INT
 AS
 BEGIN
@@ -115,7 +115,7 @@ GO
 USE AltosDelValle
 GO
 
-CREATE OR ALTER PROCEDURE dbo.sp_AgenteLeerTodosActivos
+CREATE OR ALTER PROCEDURE dbo.sp_viewAllActiveAgentes
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -138,7 +138,7 @@ GO
 USE AltosDelValle
 GO
 
-CREATE OR ALTER PROCEDURE dbo.sp_AgenteLeerTodosInactivos
+CREATE OR ALTER PROCEDURE dbo.sp_viewAllInactiveAgentes
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -159,7 +159,7 @@ GO
 USE AltosDelValle;
 GO
 
-CREATE OR ALTER PROCEDURE dbo.sp_Agente_ListarNombres
+CREATE OR ALTER PROCEDURE dbo.sp_nameListAgentes
   @_identificacion INT = NULL
 AS
 BEGIN
@@ -211,7 +211,7 @@ GO
 USE AltosDelValle;
 GO
 
-CREATE OR ALTER PROCEDURE dbo.sp_Agente_Actualizar
+CREATE OR ALTER PROCEDURE dbo.sp_updateAgente
   @_identificacion INT,
   @_nombre         VARCHAR(30) = NULL,
   @_apellido1      VARCHAR(30) = NULL,
@@ -269,7 +269,7 @@ GO
 USE AltosDelValle;
 GO
 
-CREATE OR ALTER PROCEDURE dbo.sp_agente_desactivar
+CREATE OR ALTER PROCEDURE dbo.sp_disableAgente
   @identificacion INT
 AS
 BEGIN
@@ -291,7 +291,7 @@ GO
 USE AltosDelValle;
 GO
 
-CREATE OR ALTER PROCEDURE dbo.sp_agente_activar
+CREATE OR ALTER PROCEDURE dbo.sp_enableAgente
   @identificacion INT
 AS
 BEGIN

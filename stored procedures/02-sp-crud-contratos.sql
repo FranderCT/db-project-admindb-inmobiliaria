@@ -339,8 +339,6 @@ END;
 GO
 
 
-
-
 --TABLA TIPO CONTRATO 
 INSERT INTO TipoContrato (nombre) VALUES ('Venta'), ('Alquiler');
 GO

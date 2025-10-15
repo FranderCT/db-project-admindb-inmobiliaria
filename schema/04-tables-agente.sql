@@ -1,7 +1,7 @@
---			TABLA AGENTE
 USE AltosDelValle
 GO
 
+--			TABLA AGENTE
 CREATE TABLE Agente (
     identificacion INT PRIMARY KEY,
     nombre VARCHAR(30) NOT NULL,

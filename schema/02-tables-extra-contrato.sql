@@ -1,0 +1,16 @@
+USE AltosDelValle
+GO
+
+-- TABLA TIPO CONTRATO
+CREATE TABLE TipoContrato (
+    idTipoContrato INT IDENTITY(1,1) PRIMARY KEY,
+    nombre VARCHAR(20) NOT NULL
+);
+GO
+
+-- TABLA TERMINOS CONDICIONES
+CREATE TABLE TerminosCondiciones (
+    idCondicion INT IDENTITY(1,1) PRIMARY KEY,
+    textoCondicion VARCHAR(255) NOT NULL
+);
+GO

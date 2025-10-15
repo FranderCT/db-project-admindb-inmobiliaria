@@ -2,8 +2,9 @@
   "ExpandedNodes": [
     "",
     "\\schema",
-    "\\stored procedures"
+    "\\stored procedures",
+    "\\triggers"
   ],
-  "SelectedNode": "\\stored procedures\\07-sp-crud-tipo-inmueble.sql",
+  "SelectedNode": "\\schema\\00-create-database.sql",
   "PreviewInSolutionExplorer": false
 }
