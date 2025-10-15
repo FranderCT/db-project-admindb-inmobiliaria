@@ -247,7 +247,7 @@ GO
 ---TABLA INTERMEDIA ClienteContrato
 
 ---sp_clienteContrato_insertar
-CREATE PROCEDURE sp_clienteContrato_insertar
+CREATE or alter PROCEDURE sp_clienteContrato_insertar
   @identificacion INT,
   @idRol INT,
   @idContrato INT
@@ -271,7 +271,7 @@ END
 GO
 
 --sp_clienteContrato_insertar_varios  --Este inserta varios clientes en un contrato  
-CREATE PROCEDURE sp_clienteContrato_insertar_varios
+CREATE or alter PROCEDURE  sp_clienteContrato_insertar_varios
   @json NVARCHAR(MAX)
 AS
 BEGIN
@@ -304,7 +304,7 @@ END
 GO
 
 ---sp_clienteContrato_listarTodos
-CREATE PROCEDURE sp_clienteContrato_listarTodos
+CREATE or alter PROCEDURE  sp_clienteContrato_listarTodos
 AS
 BEGIN
   SELECT 
@@ -321,7 +321,7 @@ END
 GO
 
 ----sp_clienteContrato_porContrato
-CREATE PROCEDURE sp_clienteContrato_porContrato
+CREATE or alter PROCEDURE  sp_clienteContrato_porContrato
   @idContrato INT
 AS
 BEGIN
@@ -339,7 +339,7 @@ END
 GO
 
 ---sp_clienteContrato_porCliente
-CREATE PROCEDURE sp_clienteContrato_porCliente
+CREATE or alter PROCEDURE  sp_clienteContrato_porCliente
   @identificacion INT
 AS
 BEGIN
@@ -360,7 +360,7 @@ END
 GO
 
 ----sp_clienteContrato_porRol
-CREATE PROCEDURE sp_clienteContrato_porRol
+CREATE or alter PROCEDURE  sp_clienteContrato_porRol
   @idRol INT
 AS
 BEGIN
