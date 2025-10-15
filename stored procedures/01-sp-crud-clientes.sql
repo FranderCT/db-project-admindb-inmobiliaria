@@ -2,7 +2,7 @@
 USE AltosDelValle;
 GO
 
-CREATE OR ALTER PROCEDURE dbo.sp_Cliente_Insertar
+CREATE OR ALTER PROCEDURE dbo.sp_insertCliente
   @identificacion INT,
   @nombre         VARCHAR(30),
   @apellido1      VARCHAR(30),
@@ -50,110 +50,8 @@ BEGIN
 END
 GO
 
-
-USE AltosDelValle;
-GO
-CREATE OR ALTER PROCEDURE dbo.sp_cliente_paginar_orden
-  @page     INT = 1,
-  @limit    INT = 10,
-  @sortCol  SYSNAME = 'identificacion',
-  @sortDir  VARCHAR(4) = 'ASC',
-  @q        NVARCHAR(100) = NULL,
-  @estado   BIT = NULL
-AS
-BEGIN
-  SET NOCOUNT ON;
-
-  -- Saneos
-  IF @page  < 1 SET @page  = 1;
-  IF @limit < 1 SET @limit = 10;
-  IF @limit > 100 SET @limit = 100;         -- (opcional) cap
-  IF @sortDir NOT IN ('ASC','DESC') SET @sortDir = 'ASC';
-  IF @sortCol NOT IN ('identificacion','nombre','apellido1','telefono','estado')
-    SET @sortCol = 'identificacion';
-
-  DECLARE @offset INT = (@page - 1) * @limit;
-
-  DECLARE @sql NVARCHAR(MAX) = N'
-  -- datos paginados
-  SELECT identificacion, nombre, apellido1, apellido2, telefono, estado
-  FROM dbo.Cliente
-  /**WHERE**/
-  ORDER BY ' + QUOTENAME(@sortCol) + N' ' + @sortDir + N'
-  OFFSET @o ROWS FETCH NEXT @l ROWS ONLY;
-
-  -- metadatos de paginación (mismo WHERE)
-  SELECT 
-      COUNT(*) AS total,
-      @p       AS page,
-      @l       AS limit,
-      CASE 
-        WHEN COUNT(*) = 0 THEN 0
-        ELSE CEILING( (COUNT(*) * 1.0) / @l )
-      END AS pageCount,
-      CASE WHEN @o > 0 THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS hasPrevPage,
-      CASE WHEN (@o + @l) < COUNT(*) THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS hasNextPage
-  FROM dbo.Cliente
-  /**WHERE**/;';
-
-  DECLARE @where NVARCHAR(MAX) = N'';
-  DECLARE @hasCondition BIT = 0;
-  DECLARE @like NVARCHAR(200);
-
-  IF @q IS NOT NULL AND LTRIM(RTRIM(@q)) <> N''
-  BEGIN
-    SET @hasCondition = 1;
-    SET @like = N'%' + @q + N'%';
-    SET @where = @where + N' WHERE (
-        nombre LIKE @like
-        OR apellido1 LIKE @like
-        OR ISNULL(apellido2, '''') LIKE @like
-        OR telefono LIKE @like
-        OR CAST(identificacion AS NVARCHAR(20)) LIKE @like
-        OR (nombre + N'' '' + apellido1 + ISNULL(N'' '' + apellido2, N'''')) LIKE @like
-      )';
-  END
-
-  IF @estado IS NOT NULL
-  BEGIN
-    IF @hasCondition = 1
-      SET @where = @where + N' AND estado = @estado';
-    ELSE
-    BEGIN
-      SET @hasCondition = 1;
-      SET @where = N' WHERE estado = @estado';
-    END
-  END
-
-  SET @sql = REPLACE(@sql, N'/**WHERE**/', @where);
-
-  -- Bind de parámetros según corresponda
-  IF @q IS NOT NULL AND LTRIM(RTRIM(@q)) <> N'' AND @estado IS NOT NULL
-    EXEC sp_executesql
-      @sql,
-      N'@o INT, @l INT, @p INT, @like NVARCHAR(200), @estado BIT',
-      @o=@offset, @l=@limit, @p=@page, @like=@like, @estado=@estado;
-  ELSE IF @q IS NOT NULL AND LTRIM(RTRIM(@q)) <> N''
-    EXEC sp_executesql
-      @sql,
-      N'@o INT, @l INT, @p INT, @like NVARCHAR(200)',
-      @o=@offset, @l=@limit, @p=@page, @like=@like;
-  ELSE IF @estado IS NOT NULL
-    EXEC sp_executesql
-      @sql,
-      N'@o INT, @l INT, @p INT, @estado BIT',
-      @o=@offset, @l=@limit, @p=@page, @estado=@estado;
-  ELSE
-    EXEC sp_executesql
-      @sql,
-      N'@o INT, @l INT, @p INT',
-      @o=@offset, @l=@limit, @p=@page;
-END
-GO
-
-
 -- sp leer todos los clientes 
-CREATE OR ALTER PROCEDURE dbo.sp_cliente_leer_todos
+CREATE OR ALTER PROCEDURE dbo.sp_clienteLeerTodos
 AS
 BEGIN
     SET NOCOUNT ON; 
@@ -168,7 +66,7 @@ GO
 
 -- SP_DELETE
 -- este sp solo desactiva el cliente (estado = 0)
-CREATE OR ALTER PROCEDURE sp_cliente_desactivar
+CREATE OR ALTER PROCEDURE sp_clienteDesactivar
     @identificacion INT
 AS
 BEGIN
@@ -190,7 +88,7 @@ USE AltosDelValle;
 GO
 
 -- sp para actualizar cliente
-CREATE OR ALTER PROCEDURE dbo.sp_cliente_actualizar
+CREATE OR ALTER PROCEDURE dbo.sp_updateCliente
   @identificacion INT,
   @nombre         VARCHAR(30) = NULL,
   @apellido1      VARCHAR(30) = NULL,
@@ -225,7 +123,7 @@ END
 GO
 
 -- sp actualizar estado del cliente
-CREATE OR ALTER PROCEDURE dbo.sp_cliente_actualizar_estado
+CREATE OR ALTER PROCEDURE dbo.sp_clienteActualizarEstado
   @identificacion INT,
   @estado         BIT
 AS
@@ -247,7 +145,7 @@ GO
 ---TABLA INTERMEDIA ClienteContrato
 
 ---sp_clienteContrato_insertar
-CREATE or alter PROCEDURE sp_clienteContrato_insertar
+CREATE or alter PROCEDURE sp_insertClientesContrato
   @identificacion INT,
   @idRol INT,
   @idContrato INT
@@ -271,7 +169,7 @@ END
 GO
 
 --sp_clienteContrato_insertar_varios  --Este inserta varios clientes en un contrato  
-CREATE or alter PROCEDURE  sp_clienteContrato_insertar_varios
+CREATE or alter PROCEDURE  sp_clienteContratoInsertarVarios
   @json NVARCHAR(MAX)
 AS
 BEGIN
@@ -304,7 +202,7 @@ END
 GO
 
 ---sp_clienteContrato_listarTodos
-CREATE or alter PROCEDURE  sp_clienteContrato_listarTodos
+CREATE or alter PROCEDURE  sp_clienteContratoListarTodos
 AS
 BEGIN
   SELECT 
@@ -321,7 +219,7 @@ END
 GO
 
 ----sp_clienteContrato_porContrato
-CREATE or alter PROCEDURE  sp_clienteContrato_porContrato
+CREATE or alter PROCEDURE  sp_clienteContratoPorContrato
   @idContrato INT
 AS
 BEGIN
@@ -339,7 +237,7 @@ END
 GO
 
 ---sp_clienteContrato_porCliente
-CREATE or alter PROCEDURE  sp_clienteContrato_porCliente
+CREATE or alter PROCEDURE  sp_clienteContratoPorCliente
   @identificacion INT
 AS
 BEGIN
@@ -360,11 +258,11 @@ END
 GO
 
 ----sp_clienteContrato_porRol
-CREATE or alter PROCEDURE  sp_clienteContrato_porRol
+CREATE or alter PROCEDURE  sp_clienteContratoPorRol
   @idRol INT
 AS
 BEGIN
-  -- 🔹 Retorna todos los vínculos cliente-contrato con el rol especificado
+  -- Retorna todos los vínculos cliente-contrato con el rol especificado
   SELECT 
     cc.idClienteContrato,
     cc.idContrato,
