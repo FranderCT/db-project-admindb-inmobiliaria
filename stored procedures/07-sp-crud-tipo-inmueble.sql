@@ -1,7 +1,7 @@
 -- sp para insertar tipos de inmuebles
 use AltosDelValle
 GO
-create or alter procedure sp_tipoinmueble_insertar
+create or alter procedure sp_tipoInmuebleInsertar
     @nombre VARCHAR(30)
 AS
 BEGIN
@@ -16,7 +16,7 @@ BEGIN
 END
 GO
 -- sp para leer todos los tipos de inmuebles
-create or alter procedure sp_tipoInmueble_LeerTodos
+create or alter procedure sp_tipoInmuebleLeerTodos
 AS
 BEGIN
     SET NOCOUNT ON;
