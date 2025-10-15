@@ -1,4 +1,8 @@
+use AltosDelValle
+go
+
 -- SP_INSERT 
+
 CREATE OR ALTER PROCEDURE sp_insertContratoConNuevasCondiciones
     @fechaInicio DATETIME,
     @fechaFin DATETIME,
@@ -221,7 +225,7 @@ GO
 
 
 ------   sp_detalleContrato
-CREATE OR ALTER PROCEDURE sp_detalleContrato
+CREATE OR ALTER PROCEDURE dbo.sp_detalleContrato
   @idContrato INT
 AS
 BEGIN
@@ -231,81 +235,48 @@ BEGIN
 
   SELECT @json = (
     SELECT 
-      c.idContrato,
-      c.fechaInicio,
-      c.fechaFin,
-      c.fechaFirma,
-      c.fechaPago,
-      c.montoTotal,
-      c.deposito,
-      c.porcentajeComision,
-      c.estado, 
-
-      c.idTipoContrato,
-      tc.nombre AS tipoContrato,
-
-      c.idPropiedad,
-      c.idAgente,
-
-      -- Propiedad asociada
+      c.idContrato, c.fechaInicio, c.fechaFin, c.fechaFirma, c.fechaPago,
+      c.montoTotal, c.deposito, c.porcentajeComision, c.estado,
+      c.idTipoContrato, tc.nombre AS tipoContrato,
+      c.idPropiedad, c.idAgente,
       JSON_QUERY((
-        SELECT 
-          p.idPropiedad,
-          p.ubicacion,
-          p.precio,
-          ep.idEstadoPropiedad,
-          ep.nombre AS nombreEstadoPropiedad,
-          ti.idTipoInmueble,
-          ti.nombre AS nombreTipoInmueble
-        FROM Propiedad p
-        INNER JOIN EstadoPropiedad ep ON ep.idEstadoPropiedad = p.idEstado
-        INNER JOIN TipoInmueble ti ON ti.idTipoInmueble = p.idTipoInmueble
+        SELECT p.idPropiedad, p.ubicacion, p.precio,
+               ep.idEstadoPropiedad, ep.nombre AS nombreEstadoPropiedad,
+               ti.idTipoInmueble, ti.nombre AS nombreTipoInmueble
+        FROM dbo.Propiedad p
+        INNER JOIN dbo.EstadoPropiedad ep ON ep.idEstadoPropiedad = p.idEstado
+        INNER JOIN dbo.TipoInmueble ti ON ti.idTipoInmueble = p.idTipoInmueble
         WHERE p.idPropiedad = c.idPropiedad
         FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
       )) AS propiedad,
-
-      -- Participantes
       JSON_QUERY((
-        SELECT 
-          cc.identificacion,
-          cl.nombre,
-          cl.apellido1,
-          cl.apellido2,
-          tr.idRol,
-          tr.nombre AS rol
-        FROM ClienteContrato cc
-        INNER JOIN Cliente cl ON cl.identificacion = cc.identificacion
-        INNER JOIN TipoRol tr ON tr.idRol = cc.idRol
+        SELECT cc.identificacion, cl.nombre, cl.apellido1, cl.apellido2,
+               tr.idRol, tr.nombre AS rol
+        FROM dbo.ClienteContrato cc
+        INNER JOIN dbo.Cliente cl ON cl.identificacion = cc.identificacion
+        INNER JOIN dbo.TipoRol tr ON tr.idRol = cc.idRol
         WHERE cc.idContrato = c.idContrato
         FOR JSON PATH
       )) AS participantes,
-
-      -- Condiciones
       JSON_QUERY((
-        SELECT 
-          t.idCondicion,
-          t.textoCondicion
-        FROM ContratoTerminos ct
-        INNER JOIN TerminosCondiciones t ON t.idCondicion = ct.idCondicion
+        SELECT t.idCondicion, t.textoCondicion
+        FROM dbo.ContratoTerminos ct
+        INNER JOIN dbo.TerminosCondiciones t ON t.idCondicion = ct.idCondicion
         WHERE ct.idContrato = c.idContrato
         FOR JSON PATH
       )) AS condiciones
-
-    FROM Contrato c
-    INNER JOIN TipoContrato tc ON c.idTipoContrato = tc.idTipoContrato
+    FROM dbo.Contrato c
+    INNER JOIN dbo.TipoContrato tc ON c.idTipoContrato = tc.idTipoContrato
     WHERE c.idContrato = @idContrato
     FOR JSON PATH, INCLUDE_NULL_VALUES
   );
 
-  IF @json IS NULL OR LEN(@json) = 0
-    SET @json = '[]';
-
+  IF @json IS NULL OR LEN(@json) = 0 SET @json = '[]';
   SELECT @json AS data;
 END;
 GO
 
-----  sp_consultarContratosDetalleGeneral
-CREATE OR ALTER PROCEDURE sp_detalleGeneralContrato
+CREATE OR ALTER PROCEDURE dbo.sp_detalleGeneralContrato
   @idContrato INT
 AS
 BEGIN
@@ -315,311 +286,58 @@ BEGIN
 
   SELECT @json = (
     SELECT 
-      c.idContrato,
-      c.fechaInicio,
-      c.fechaFin,
-      c.fechaFirma,
-      c.fechaPago,
-      tc.nombre AS tipoContrato,
-
-      -- Propiedad (con cliente propietario)
+      c.idContrato, c.fechaInicio, c.fechaFin, c.fechaFirma, c.fechaPago,
+      c.montoTotal, c.deposito, c.porcentajeComision, c.estado,
+      c.idTipoContrato, tc.nombre AS tipoContrato,
+      c.idPropiedad, c.idAgente,
       JSON_QUERY((
-        SELECT 
-          p.idPropiedad,
-          p.ubicacion,
-          p.precio,
-          ep.idEstadoPropiedad,
-          ep.nombre AS estadoPropiedad,
-          ti.idTipoInmueble,
-          ti.nombre AS tipoInmueble,
-          JSON_QUERY((
-            SELECT 
-              cli.identificacion,
-              cli.nombre,
-              cli.apellido1,
-              cli.apellido2,
-              cli.telefono,
-              cli.estado
-            FROM Cliente cli
-            WHERE cli.identificacion = p.identificacion
-            FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
-          )) AS cliente
-        FROM Propiedad p
-        INNER JOIN EstadoPropiedad ep ON ep.idEstadoPropiedad = p.idEstado
-        INNER JOIN TipoInmueble ti ON ti.idTipoInmueble = p.idTipoInmueble
+        SELECT p.idPropiedad, p.ubicacion, p.precio,
+               ep.idEstadoPropiedad, ep.nombre AS estadoPropiedad,
+               ti.idTipoInmueble, ti.nombre AS tipoInmueble,
+               JSON_QUERY((
+                 SELECT cli.identificacion, cli.nombre, cli.apellido1, cli.apellido2, cli.telefono, cli.estado
+                 FROM dbo.Cliente cli
+                 WHERE cli.identificacion = p.identificacion
+                 FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+               )) AS cliente
+        FROM dbo.Propiedad p
+        INNER JOIN dbo.EstadoPropiedad ep ON ep.idEstadoPropiedad = p.idEstado
+        INNER JOIN dbo.TipoInmueble ti ON ti.idTipoInmueble = p.idTipoInmueble
         WHERE p.idPropiedad = c.idPropiedad
         FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
       )) AS propiedad,
-
-      -- Agente
       JSON_QUERY((
-        SELECT 
-          a.identificacion,
-          a.nombre,
-          a.apellido1,
-          a.apellido2,
-          a.comisionAcumulada
-        FROM Agente a
+        SELECT a.identificacion, a.nombre, a.apellido1, a.apellido2, a.comisionAcumulada
+        FROM dbo.Agente a
         WHERE a.identificacion = c.idAgente
         FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
       )) AS agente,
-
-      -- Participantes del contrato
       JSON_QUERY((
-        SELECT 
-          cl.identificacion,
-          cl.nombre,
-          cl.apellido1,
-          cl.apellido2,
-          tr.idRol,
-          tr.nombre AS rol
-        FROM ClienteContrato cc
-        INNER JOIN Cliente cl ON cl.identificacion = cc.identificacion
-        INNER JOIN TipoRol tr ON tr.idRol = cc.idRol
+        SELECT cl.identificacion, cl.nombre, cl.apellido1, cl.apellido2, tr.idRol, tr.nombre AS rol
+        FROM dbo.ClienteContrato cc
+        INNER JOIN dbo.Cliente cl ON cl.identificacion = cc.identificacion
+        INNER JOIN dbo.TipoRol tr ON tr.idRol = cc.idRol
         WHERE cc.idContrato = c.idContrato
         FOR JSON PATH
       )) AS participantes,
-
-      --  Condiciones del contrato
       JSON_QUERY((
-        SELECT 
-          t.idCondicion,
-          t.textoCondicion
-        FROM ContratoTerminos ct
-        INNER JOIN TerminosCondiciones t ON t.idCondicion = ct.idCondicion
+        SELECT t.idCondicion, t.textoCondicion
+        FROM dbo.ContratoTerminos ct
+        INNER JOIN dbo.TerminosCondiciones t ON t.idCondicion = ct.idCondicion
         WHERE ct.idContrato = c.idContrato
         FOR JSON PATH
       )) AS condiciones
-
-    FROM Contrato c
-    INNER JOIN TipoContrato tc ON tc.idTipoContrato = c.idTipoContrato
+    FROM dbo.Contrato c
+    INNER JOIN dbo.TipoContrato tc ON tc.idTipoContrato = c.idTipoContrato
     WHERE c.idContrato = @idContrato
     FOR JSON PATH, INCLUDE_NULL_VALUES
   );
 
-  IF @json IS NULL OR LEN(@json) = 0
-    SET @json = '[]';
-
-  SELECT @json AS data;
-END
-GO
-
----- sp_detalleGeneralContrato
-CREATE OR ALTER PROCEDURE sp_detalleGeneralContrato
-  @idContrato INT
-AS
-BEGIN
-  SET NOCOUNT ON;
-
-  DECLARE @json NVARCHAR(MAX);
-
-  SELECT @json = (
-    SELECT 
-      c.idContrato,
-      c.fechaInicio,
-      c.fechaFin,
-      c.fechaFirma,
-      c.fechaPago,
-      c.montoTotal,
-      c.deposito,
-      c.porcentajeComision,
-      c.estado, 
-
-      c.idTipoContrato,
-      tc.nombre AS tipoContrato,
-
-      c.idPropiedad,
-      c.idAgente,
-
-
-      -- Propiedad (con cliente propietario)
-      JSON_QUERY((
-        SELECT 
-          p.idPropiedad,
-          p.ubicacion,
-          p.precio,
-          ep.idEstadoPropiedad,
-          ep.nombre AS estadoPropiedad,
-          ti.idTipoInmueble,
-          ti.nombre AS tipoInmueble,
-          JSON_QUERY((
-            SELECT 
-              cli.identificacion,
-              cli.nombre,
-              cli.apellido1,
-              cli.apellido2,
-              cli.telefono,
-              cli.estado
-            FROM Cliente cli
-            WHERE cli.identificacion = p.identificacion
-            FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
-          )) AS cliente
-        FROM Propiedad p
-        INNER JOIN EstadoPropiedad ep ON ep.idEstadoPropiedad = p.idEstado
-        INNER JOIN TipoInmueble ti ON ti.idTipoInmueble = p.idTipoInmueble
-        WHERE p.idPropiedad = c.idPropiedad
-        FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
-      )) AS propiedad,
-
-      --  Agente
-      JSON_QUERY((
-        SELECT 
-          a.identificacion,
-          a.nombre,
-          a.apellido1,
-          a.apellido2,
-          a.comisionAcumulada
-        FROM Agente a
-        WHERE a.identificacion = c.idAgente
-        FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
-      )) AS agente,
-
-      -- Participantes
-      JSON_QUERY((
-        SELECT 
-          cl.identificacion,
-          cl.nombre,
-          cl.apellido1,
-          cl.apellido2,
-          tr.idRol,
-          tr.nombre AS rol
-        FROM ClienteContrato cc
-        INNER JOIN Cliente cl ON cl.identificacion = cc.identificacion
-        INNER JOIN TipoRol tr ON tr.idRol = cc.idRol
-        WHERE cc.idContrato = c.idContrato
-        FOR JSON PATH
-      )) AS participantes,
-
-      -- Condiciones
-      JSON_QUERY((
-        SELECT 
-          t.idCondicion,
-          t.textoCondicion
-        FROM ContratoTerminos ct
-        INNER JOIN TerminosCondiciones t ON t.idCondicion = ct.idCondicion
-        WHERE ct.idContrato = c.idContrato
-        FOR JSON PATH
-      )) AS condiciones
-
-    FROM Contrato c
-    INNER JOIN TipoContrato tc ON tc.idTipoContrato = c.idTipoContrato
-    WHERE c.idContrato = @idContrato
-    FOR JSON PATH, INCLUDE_NULL_VALUES
-  );
-
-  IF @json IS NULL OR LEN(@json) = 0
-    SET @json = '[]';
-
+  IF @json IS NULL OR LEN(@json) = 0 SET @json = '[]';
   SELECT @json AS data;
 END;
 GO
 
----- sp_detalleGeneralContratos
-CREATE OR ALTER PROCEDURE sp_detalleGeneralContratos
-AS
-BEGIN
-  SET NOCOUNT ON;
-
-  DECLARE @json NVARCHAR(MAX);
-
-  SELECT @json = (
-    SELECT 
-      c.idContrato,
-      c.fechaInicio,
-      c.fechaFin,
-      c.fechaFirma,
-      c.fechaPago,
-      c.montoTotal,
-      c.deposito,
-      c.porcentajeComision,
-      c.estado, 
-
-      c.idTipoContrato,
-      tc.nombre AS tipoContrato,
-
-      c.idPropiedad,
-      c.idAgente,
-
-      --  Propiedad (con cliente propietario)
-      JSON_QUERY((
-        SELECT 
-          p.idPropiedad,
-          p.ubicacion,
-          p.precio,
-          ep.idEstadoPropiedad,
-          ep.nombre AS estadoPropiedad,
-          ti.idTipoInmueble,
-          ti.nombre AS tipoInmueble,
-          JSON_QUERY((
-            SELECT 
-              cli.identificacion,
-              cli.nombre,
-              cli.apellido1,
-              cli.apellido2,
-              cli.telefono,
-              cli.estado
-            FROM Cliente cli
-            WHERE cli.identificacion = p.identificacion
-            FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
-          )) AS cliente
-        FROM Propiedad p
-        INNER JOIN EstadoPropiedad ep ON ep.idEstadoPropiedad = p.idEstado
-        INNER JOIN TipoInmueble ti ON ti.idTipoInmueble = p.idTipoInmueble
-        WHERE p.idPropiedad = c.idPropiedad
-        FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
-      )) AS propiedad,
-
-      -- Agente
-      JSON_QUERY((
-        SELECT 
-          a.identificacion,
-          a.nombre,
-          a.apellido1,
-          a.apellido2,
-          a.comisionAcumulada
-        FROM Agente a
-        WHERE a.identificacion = c.idAgente
-        FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
-      )) AS agente,
-
-      -- Participantes
-      JSON_QUERY((
-        SELECT 
-          cl.identificacion,
-          cl.nombre,
-          cl.apellido1,
-          cl.apellido2,
-          tr.idRol,
-          tr.nombre AS rol
-        FROM ClienteContrato cc
-        INNER JOIN Cliente cl ON cl.identificacion = cc.identificacion
-        INNER JOIN TipoRol tr ON tr.idRol = cc.idRol
-        WHERE cc.idContrato = c.idContrato
-        FOR JSON PATH
-      )) AS participantes,
-
-      --  Condiciones
-      JSON_QUERY((
-        SELECT 
-          t.idCondicion,
-          t.textoCondicion
-        FROM ContratoTerminos ct
-        INNER JOIN TerminosCondiciones t ON t.idCondicion = ct.idCondicion
-        WHERE ct.idContrato = c.idContrato
-        FOR JSON PATH
-      )) AS condiciones
-
-    FROM Contrato c
-    INNER JOIN TipoContrato tc ON tc.idTipoContrato = c.idTipoContrato
-    FOR JSON PATH, INCLUDE_NULL_VALUES
-  );
-
-  IF @json IS NULL OR LEN(@json) = 0
-    SET @json = '[]';
-
-  SELECT @json AS data;
-END;
-GO
 
 
 

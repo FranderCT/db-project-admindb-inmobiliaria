@@ -1,3 +1,6 @@
+use AltosDelValle
+go
+
 -- SP_INSERT 
 create or alter procedure sp_insertFactura
   @_montoPagado        MONEY,
