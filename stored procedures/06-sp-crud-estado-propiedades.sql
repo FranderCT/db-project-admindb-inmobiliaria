@@ -1,7 +1,7 @@
 -- sp para insertar estados de propiedades
 use AltosDelValle
 GO
-create or alter procedure sp_estadopropiedad_insertar
+create or alter procedure sp_insertEstadoPropiedad
     @nombre VARCHAR(30)
 AS
 BEGIN
@@ -18,7 +18,7 @@ END
 GO
 -- sp para leer todos los estados de propiedades
 
-create or alter procedure sp_estadoPropiedad_LeerTodos
+create or alter procedure sp_readEstadoPropiedad
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -30,3 +30,14 @@ END
 GO
 
 -- quiero elimninar todos los estados de propiedad del 1 al 8
+
+EXEC dbo.sp_insertEstadoPropiedad @nombre = 'Disponible';
+EXEC dbo.sp_insertEstadoPropiedad @nombre = 'Vendido';
+EXEC dbo.sp_insertEstadoPropiedad @nombre = 'Alquilado';
+EXEC dbo.sp_insertEstadoPropiedad @nombre = 'Reservado';
+EXEC dbo.sp_insertEstadoPropiedad @nombre = 'En Mantenimiento';
+EXEC dbo.sp_insertEstadoPropiedad @nombre = 'No Disponible';
+EXEC dbo.sp_insertEstadoPropiedad @nombre = 'Pendiente de Pago';
+EXEC dbo.sp_insertEstadoPropiedad @nombre = 'Archivado';
+
+
