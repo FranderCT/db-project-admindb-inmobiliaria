@@ -1,0 +1,13 @@
+ALTER DATABASE AltosDelValle 
+SET SINGLE_USER 
+WITH ROLLBACK IMMEDIATE;
+
+DROP DATABASE AltosDelValle;
+
+USE master;
+GO
+DROP DATABASE AltosDelValle;
+
+SELECT name 
+FROM sys.databases;
+
