@@ -206,6 +206,45 @@ BEGIN
 END
 GO
 
+--SP READ VER LOS CONTRATOS EN QUE HA PARTICIPADO UN AGENTE
+USE AltosDelValle;
+GO
+
+CREATE OR ALTER PROCEDURE sp_getContratosPorAgente
+  @idAgente BIGINT
+AS
+BEGIN
+  SET NOCOUNT ON;
+
+  -- Validar existencia del agente
+  IF NOT EXISTS (SELECT 1 FROM Agente WHERE identificacion = @idAgente)
+  BEGIN
+    RAISERROR('El agente especificado no existe.', 16, 1);
+    RETURN;
+  END;
+
+  -- Seleccionar contratos del agente
+  SELECT
+      c.idContrato,
+      tc.nombre AS tipoContrato,
+      p.idPropiedad,
+      p.ubicacion AS propiedadUbicacion,
+      c.fechaInicio,
+      c.fechaFin,
+      c.fechaFirma,
+      c.montoTotal,
+      c.deposito,
+      c.porcentajeComision,
+      c.estado
+  FROM Contrato c
+  INNER JOIN TipoContrato tc ON c.idTipoContrato = tc.idTipoContrato
+  INNER JOIN Propiedad p ON c.idPropiedad = p.idPropiedad
+  WHERE c.idAgente = @idAgente
+  ORDER BY c.fechaInicio DESC;
+END;
+GO
+
+
 
 -- SP_UPDATE
 USE AltosDelValle;
