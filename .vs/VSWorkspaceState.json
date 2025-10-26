@@ -3,8 +3,9 @@
     "",
     "\\schema",
     "\\stored procedures",
-    "\\triggers"
+    "\\triggers",
+    "\\views"
   ],
-  "SelectedNode": "\\schema\\00-create-database.sql",
+  "SelectedNode": "\\stored procedures\\02-sp-crud-contratos.sql",
   "PreviewInSolutionExplorer": false
 }

@@ -99,8 +99,7 @@ BEGIN
                 c.fechaFirma,
                 c.fechaPago,
 
-
-                -- Agregar también los IDs de las tablas relacionadas
+                -- IDs y relaciones
                 c.idTipoContrato,
                 tc.nombre AS TipoContrato,
 
@@ -111,7 +110,9 @@ BEGIN
                 a.nombre AS NombreAgente,
                 a.apellido1 AS ApellidoAgente,
 
-                -- ondiciones del contrato
+                c.estado,
+
+                -- Condiciones del contrato
                 (
                     SELECT 
                         t.idCondicion,
@@ -135,7 +136,7 @@ BEGIN
         DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
         RAISERROR(@ErrorMessage, 16, 1);
     END CATCH
-END
+END;
 GO
 
 
