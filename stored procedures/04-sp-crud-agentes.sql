@@ -64,6 +64,7 @@ BEGIN
         apellido1,
         apellido2,
         telefono,
+        comisionAcumulada,
         estado
     FROM dbo.Agente
 END

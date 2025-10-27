@@ -144,7 +144,7 @@ GO
 
 
 -- SP_READ
-CREATE OR ALTER PROCEDURE sp_getFacturas
+CREATE OR ALTER PROCEDURE dbo.sp_getFacturas
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -155,28 +155,44 @@ BEGIN
         p.idPropiedad,
         CONCAT(a.nombre, ' ', a.apellido1) AS nombreAgente,
         f.porcentajeComision,
-        FORMAT(f.fechaEmision, 'yyyy-MM-dd') AS fechaEmision,
-        FORMAT(f.fechaPago, 'yyyy-MM-dd') AS fechaPago,
+        CONVERT(varchar(10), f.fechaEmision, 23) AS fechaEmision,  -- yyyy-MM-dd (más rápido que FORMAT)
+        CONVERT(varchar(10), f.fechaPago,    23) AS fechaPago,     -- puede quedar NULL si no hay pago
         f.estadoPago,
         c.idContrato,
-        --  Agrupar clientes asociados a la factura
-        STRING_AGG(CONCAT(cl.identificacion, ' - ', cl.nombre, ' ', cl.apellido1, ' (', tr.nombre, ')'), ', ') AS clientes,
+
+        -- Si no hay filas de cliente, STRING_AGG devuelve NULL -> lo forzamos a '' para no romper el mapeo
+        ISNULL(
+            STRING_AGG(
+                CONCAT(
+                    cl.identificacion, ' - ', cl.nombre, ' ', cl.apellido1,
+                    ' (', ISNULL(tr.nombre, 'Sin rol'), ')'
+                ),
+                ', '
+            ),
+            ''
+        ) AS clientes,
+
         f.montoPagado
     FROM Factura f
-    INNER JOIN Contrato c ON f.idContrato = c.idContrato
-    INNER JOIN Propiedad p ON c.idPropiedad = p.idPropiedad
-    INNER JOIN TipoContrato tc ON c.idTipoContrato = tc.idTipoContrato
-    INNER JOIN Agente a ON f.idAgente = a.identificacion
-    INNER JOIN FacturaCliente fc ON f.idFactura = fc.idFactura
-    INNER JOIN Cliente cl ON fc.identificacion = cl.identificacion
-    LEFT JOIN ClienteContrato cc ON cc.idContrato = c.idContrato AND cc.identificacion = cl.identificacion
-    LEFT JOIN TipoRol tr ON tr.idRol = cc.idRol
+    INNER JOIN Contrato      c  ON c.idContrato   = f.idContrato
+    INNER JOIN Propiedad     p  ON p.idPropiedad  = c.idPropiedad
+    INNER JOIN TipoContrato  tc ON tc.idTipoContrato = c.idTipoContrato
+    INNER JOIN Agente        a  ON a.identificacion = f.idAgente
+
+    -- Cambiados a LEFT JOIN para no excluir facturas sin clientes
+    LEFT JOIN FacturaCliente fc ON fc.idFactura      = f.idFactura
+    LEFT JOIN Cliente        cl ON cl.identificacion = fc.identificacion
+
+    LEFT JOIN ClienteContrato cc ON cc.idContrato = c.idContrato
+                                 AND cc.identificacion = cl.identificacion
+    LEFT JOIN TipoRol        tr ON tr.idRol = cc.idRol
+
     GROUP BY 
         f.idFactura, tc.nombre, p.idPropiedad, a.nombre, a.apellido1,
         f.porcentajeComision, f.fechaEmision, f.fechaPago,
         f.estadoPago, c.idContrato, f.montoPagado
-    ORDER BY f.idFactura DESC;
-END;
+    ORDER BY f.idFactura DESC;
+END
 GO
 
 --SP READ
