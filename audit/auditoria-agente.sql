@@ -14,30 +14,55 @@ CREATE TABLE AuditoriaAgente (
 );
 GO
 
-CREATE TRIGGER tr_auditoria_agente
+CREATE OR ALTER TRIGGER tr_auditoria_agente
 ON Agente
 AFTER INSERT, UPDATE, DELETE
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- Obtener el usuario que realiza la acción desde SESSION_CONTEXT
-    DECLARE @usuario NVARCHAR(100) = CAST(SESSION_CONTEXT(N'usuario_jwt') AS NVARCHAR(100));
-    DECLARE @host NVARCHAR(100) = HOST_NAME();
+    -- 1. Obtener valores del contexto (token JWT)
+    DECLARE 
+        @correo NVARCHAR(150) = CAST(SESSION_CONTEXT(N'correo') AS NVARCHAR(150)),
+        @nombreRol NVARCHAR(100) = CAST(SESSION_CONTEXT(N'nombreRol') AS NVARCHAR(100)),
+        @host NVARCHAR(100) = HOST_NAME();
 
-    -- INSERT
+    -- 2. Formatear el campo usuario
+    DECLARE @usuario NVARCHAR(250) = 
+        CONCAT(ISNULL(@correo, 'Desconocido'), ' (Rol: ', ISNULL(@nombreRol, 'Sin rol'), ')');
+
+    -- 3. INSERT
     IF EXISTS (SELECT * FROM inserted)
-        INSERT INTO AuditoriaAgente (idAgente, nombre, apellido1, apellido2, telefono, comisionAcumulada, estado, accion, usuario, host)
-        SELECT identificacion, nombre, apellido1, apellido2, telefono, comisionAcumulada, estado, 'INSERT', @usuario, @host FROM inserted;
+        INSERT INTO AuditoriaAgente (
+            idAgente, nombre, apellido1, apellido2, telefono,
+            comisionAcumulada, estado, accion, usuario, host
+        )
+        SELECT 
+            identificacion, nombre, apellido1, apellido2, telefono,
+            comisionAcumulada, estado, 'INSERT', @usuario, @host
+        FROM inserted;
 
-    -- UPDATE
+    -- 4. UPDATE
     IF EXISTS (SELECT * FROM inserted)
-        INSERT INTO AuditoriaAgente (idAgente, nombre, apellido1, apellido2, telefono, comisionAcumulada, estado, accion, usuario, host)
-        SELECT identificacion, nombre, apellido1, apellido2, telefono, comisionAcumulada, estado, 'UPDATE', @usuario, @host FROM inserted;
+        INSERT INTO AuditoriaAgente (
+            idAgente, nombre, apellido1, apellido2, telefono,
+            comisionAcumulada, estado, accion, usuario, host
+        )
+        SELECT 
+            identificacion, nombre, apellido1, apellido2, telefono,
+            comisionAcumulada, estado, 'UPDATE', @usuario, @host
+        FROM inserted;
 
-    -- DELETE
+    -- 5. DELETE
     IF EXISTS (SELECT * FROM deleted)
-        INSERT INTO AuditoriaAgente (idAgente, nombre, apellido1, apellido2, telefono, comisionAcumulada, estado, accion, usuario, host)
-        SELECT identificacion, nombre, apellido1, apellido2, telefono, comisionAcumulada, estado, 'DELETE', @usuario, @host FROM deleted;
+        INSERT INTO AuditoriaAgente (
+            idAgente, nombre, apellido1, apellido2, telefono,
+            comisionAcumulada, estado, accion, usuario, host
+        )
+        SELECT 
+            identificacion, nombre, apellido1, apellido2, telefono,
+            comisionAcumulada, estado, 'DELETE', @usuario, @host
+        FROM deleted;
 END;
 GO
+
