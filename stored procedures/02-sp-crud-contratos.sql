@@ -1,6 +1,3 @@
-use AltosDelValle
-go
-
 -- SP_INSERT 
 
 CREATE OR ALTER PROCEDURE sp_insertContratoConNuevasCondiciones
@@ -99,8 +96,7 @@ BEGIN
                 c.fechaFirma,
                 c.fechaPago,
 
-
-                -- Agregar también los IDs de las tablas relacionadas
+                -- IDs y relaciones
                 c.idTipoContrato,
                 tc.nombre AS TipoContrato,
 
@@ -111,7 +107,9 @@ BEGIN
                 a.nombre AS NombreAgente,
                 a.apellido1 AS ApellidoAgente,
 
-                -- ondiciones del contrato
+                c.estado,
+
+                -- Condiciones del contrato
                 (
                     SELECT 
                         t.idCondicion,
@@ -135,7 +133,7 @@ BEGIN
         DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
         RAISERROR(@ErrorMessage, 16, 1);
     END CATCH
-END
+END;
 GO
 
 
@@ -420,28 +418,6 @@ BEGIN
 END;
 GO
 
----sp_deleteTipoContrato
-CREATE OR ALTER PROCEDURE sp_deleteTipoContrato
-  @idTipoContrato INT
-AS
-BEGIN
-  BEGIN TRY
-    BEGIN TRANSACTION;
-
-    IF NOT EXISTS (SELECT 1 FROM TipoContrato WHERE idTipoContrato = @idTipoContrato)
-      THROW 50020, 'No existe un tipo de contrato con ese ID.', 1;
-
-    DELETE FROM TipoContrato WHERE idTipoContrato = @idTipoContrato;
-
-    COMMIT TRANSACTION;
-    SELECT @idTipoContrato AS idTipoContrato, 'Tipo de contrato eliminado correctamente' AS mensaje;
-  END TRY
-  BEGIN CATCH
-    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
-    THROW;
-  END CATCH
-END;
-GO
 
 
 
