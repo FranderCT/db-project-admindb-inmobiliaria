@@ -156,7 +156,7 @@ BEGIN
         f.idFactura,
         tc.nombre AS tipoContrato,
         p.idPropiedad,
-        CONCAT(a.nombre, ' ', a.apellido1, ' ', a.identificacion) AS nombreAgente,
+        CONCAT(a.nombre, ' ', a.apellido1) AS nombreAgente,
         f.porcentajeComision,
         CONVERT(varchar(10), f.fechaEmision, 23) AS fechaEmision,
         CONVERT(varchar(10), f.fechaPago, 23) AS fechaPago,
@@ -215,26 +215,57 @@ BEGIN
         p.idPropiedad,
         CONCAT(a.nombre, ' ', a.apellido1) AS nombreAgente,
         f.porcentajeComision,
-        FORMAT(f.fechaEmision, 'yyyy-MM-dd') AS fechaEmision,
-        FORMAT(f.fechaPago, 'yyyy-MM-dd') AS fechaPago,
+        CONVERT(varchar(10), f.fechaEmision, 23) AS fechaEmision,
+        CONVERT(varchar(10), f.fechaPago, 23) AS fechaPago,
         f.estadoPago,
         c.idContrato,
-        STRING_AGG(CONCAT(cl.identificacion, ' - ', cl.nombre, ' ', cl.apellido1, ' (', tr.nombre, ')'), ', ') AS clientes,
+
+        --Solo muestra el cliente que compra/alquila.
+        ISNULL(
+            (
+                SELECT TOP 1
+                    CONCAT(
+                        cl2.identificacion, ' - ', cl2.nombre, ' ', cl2.apellido1,
+                        ' (', ISNULL(tr2.nombre, 'Sin rol'), ')'
+                    )
+                FROM FacturaCliente fc2
+                INNER JOIN Cliente cl2 ON cl2.identificacion = fc2.identificacion
+                INNER JOIN ClienteContrato cc2 ON cc2.idContrato = c.idContrato
+                                              AND cc2.identificacion = cl2.identificacion
+                INNER JOIN TipoRol tr2 ON tr2.idRol = cc2.idRol
+                WHERE fc2.idFactura = f.idFactura
+                  AND (
+                        (tc.nombre = 'Venta' AND tr2.nombre = 'Comprador')
+                     OR (tc.nombre = 'Alquiler' AND tr2.nombre = 'Inquilino')
+                  )
+            ),
+            'No asignado'
+        ) AS cliente,
+
         f.montoPagado
     FROM Factura f
-    INNER JOIN Contrato c ON f.idContrato = c.idContrato
-    INNER JOIN Propiedad p ON c.idPropiedad = p.idPropiedad
-    INNER JOIN TipoContrato tc ON c.idTipoContrato = tc.idTipoContrato
-    INNER JOIN Agente a ON f.idAgente = a.identificacion
-    INNER JOIN FacturaCliente fc ON f.idFactura = fc.idFactura
+    INNER JOIN Contrato      c  ON f.idContrato   = c.idContrato
+    INNER JOIN Propiedad     p  ON p.idPropiedad  = c.idPropiedad
+    INNER JOIN TipoContrato  tc ON tc.idTipoContrato = c.idTipoContrato
+    INNER JOIN Agente        a  ON a.identificacion = f.idAgente
+    INNER JOIN FacturaCliente fc ON fc.idFactura = f.idFactura
     INNER JOIN Cliente cl ON fc.identificacion = cl.identificacion
     LEFT JOIN ClienteContrato cc ON cc.idContrato = c.idContrato AND cc.identificacion = cl.identificacion
     LEFT JOIN TipoRol tr ON tr.idRol = cc.idRol
     WHERE
         (@estadoPago IS NULL OR f.estadoPago = @estadoPago)
         AND (@idContrato IS NULL OR c.idContrato = @idContrato)
-        AND (@idCliente IS NULL OR cl.identificacion = @idCliente)
         AND (@fecha IS NULL OR CAST(f.fechaEmision AS DATE) = @fecha)
+        AND (
+            @idCliente IS NULL
+            OR (
+                cl.identificacion = @idCliente
+                AND (
+                    (tc.nombre = 'Venta' AND tr.nombre = 'Comprador')
+                    OR (tc.nombre = 'Alquiler' AND tr.nombre = 'Inquilino')
+                )
+            )
+        )
     GROUP BY 
         f.idFactura, tc.nombre, p.idPropiedad, a.nombre, a.apellido1,
         f.porcentajeComision, f.fechaEmision, f.fechaPago,
@@ -242,6 +273,7 @@ BEGIN
     ORDER BY f.idFactura DESC;
 END;
 GO
+
 
 
 
