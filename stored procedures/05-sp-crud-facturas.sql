@@ -144,6 +144,9 @@ GO
 
 
 -- SP_READ
+USE AltosDelValle;
+GO
+
 CREATE OR ALTER PROCEDURE dbo.sp_getFacturas
 AS
 BEGIN
@@ -155,22 +158,32 @@ BEGIN
         p.idPropiedad,
         CONCAT(a.nombre, ' ', a.apellido1) AS nombreAgente,
         f.porcentajeComision,
-        CONVERT(varchar(10), f.fechaEmision, 23) AS fechaEmision,  -- yyyy-MM-dd (más rápido que FORMAT)
-        CONVERT(varchar(10), f.fechaPago,    23) AS fechaPago,     -- puede quedar NULL si no hay pago
+        CONVERT(varchar(10), f.fechaEmision, 23) AS fechaEmision,
+        CONVERT(varchar(10), f.fechaPago, 23) AS fechaPago,
         f.estadoPago,
         c.idContrato,
 
-        -- Si no hay filas de cliente, STRING_AGG devuelve NULL -> lo forzamos a '' para no romper el mapeo
+        -- Solo mostrar al cliente con rol relevante según el tipo de contrato
         ISNULL(
-            STRING_AGG(
-                CONCAT(
-                    cl.identificacion, ' - ', cl.nombre, ' ', cl.apellido1,
-                    ' (', ISNULL(tr.nombre, 'Sin rol'), ')'
-                ),
-                ', '
+            (
+                SELECT TOP 1
+                    CONCAT(
+                        cl.identificacion, ' - ', cl.nombre, ' ', cl.apellido1,
+                        ' (', ISNULL(tr.nombre, 'Sin rol'), ')'
+                    )
+                FROM FacturaCliente fc
+                INNER JOIN Cliente cl ON cl.identificacion = fc.identificacion
+                INNER JOIN ClienteContrato cc ON cc.idContrato = c.idContrato
+                                              AND cc.identificacion = cl.identificacion
+                INNER JOIN TipoRol tr ON tr.idRol = cc.idRol
+                WHERE fc.idFactura = f.idFactura
+                  AND (
+                        (tc.nombre = 'Venta' AND tr.nombre = 'Comprador')
+                     OR (tc.nombre = 'Alquiler' AND tr.nombre = 'Inquilino')
+                  )
             ),
-            ''
-        ) AS clientes,
+            'No asignado'
+        ) AS clientePrincipal,
 
         f.montoPagado
     FROM Factura f
@@ -178,22 +191,10 @@ BEGIN
     INNER JOIN Propiedad     p  ON p.idPropiedad  = c.idPropiedad
     INNER JOIN TipoContrato  tc ON tc.idTipoContrato = c.idTipoContrato
     INNER JOIN Agente        a  ON a.identificacion = f.idAgente
-
-    -- Cambiados a LEFT JOIN para no excluir facturas sin clientes
-    LEFT JOIN FacturaCliente fc ON fc.idFactura      = f.idFactura
-    LEFT JOIN Cliente        cl ON cl.identificacion = fc.identificacion
-
-    LEFT JOIN ClienteContrato cc ON cc.idContrato = c.idContrato
-                                 AND cc.identificacion = cl.identificacion
-    LEFT JOIN TipoRol        tr ON tr.idRol = cc.idRol
-
-    GROUP BY 
-        f.idFactura, tc.nombre, p.idPropiedad, a.nombre, a.apellido1,
-        f.porcentajeComision, f.fechaEmision, f.fechaPago,
-        f.estadoPago, c.idContrato, f.montoPagado
-    ORDER BY f.idFactura DESC;
-END
+    ORDER BY f.idFactura DESC;
+END;
 GO
+
 
 --SP READ
 USE AltosDelValle;
