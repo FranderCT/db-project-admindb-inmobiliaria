@@ -156,7 +156,7 @@ BEGIN
         f.idFactura,
         tc.nombre AS tipoContrato,
         p.idPropiedad,
-        CONCAT(a.nombre, ' ', a.apellido1) AS nombreAgente,
+        CONCAT(a.nombre, ' ', a.apellido1, ' ', a.identificacion) AS nombreAgente,
         f.porcentajeComision,
         CONVERT(varchar(10), f.fechaEmision, 23) AS fechaEmision,
         CONVERT(varchar(10), f.fechaPago, 23) AS fechaPago,
