@@ -34,7 +34,7 @@ BEGIN
     WHERE idContrato = @idContrato;
 
     IF NOT EXISTS (SELECT 1 FROM Contrato WHERE idContrato = @idContrato)
-    THROW 50009, 'El contrato indicado no existe.', 1;
+      THROW 50009, 'El contrato indicado no existe.', 1;
 
     IF @montoPagado IS NULL OR @montoPagado <= 0
       THROW 50010, 'El contrato no tiene un monto total válido.', 1;
@@ -49,27 +49,27 @@ BEGIN
       THROW 50013, 'El contrato no tiene propiedad o tipo de contrato asignado.', 1;
 
     IF @idAgente IS NULL
-    THROW 50014, 'El contrato no tiene un agente asignado.',1;
+      THROW 50014, 'El contrato no tiene un agente asignado.', 1;
 
     --  Validar agente
     IF NOT EXISTS (SELECT 1 FROM Agente WHERE identificacion = @idAgente)
       THROW 50014, 'El agente no existe.', 1;
 
-      -- Validar que el contrato tenga clientes asociados
-    IF NOT EXISTS (
-    SELECT 1 FROM ClienteContrato WHERE idContrato = @idContrato
-     )
-    THROW 50015, 'El contrato no tiene clientes asociados. No se puede emitir una factura.', 1;
+    -- Validar que el contrato tenga clientes asociados
+    IF NOT EXISTS (SELECT 1 FROM ClienteContrato WHERE idContrato = @idContrato)
+      THROW 50015, 'El contrato no tiene clientes asociados. No se puede emitir una factura.', 1;
 
-    -- Obtener el nombre del tipo de contrato
-    SELECT @nombreTipoContrato = nombre FROM TipoContrato WHERE idTipoContrato = @idTipoContrato;
+    -- Obtener nombre del tipo de contrato
+    SELECT @nombreTipoContrato = nombre 
+    FROM TipoContrato 
+    WHERE idTipoContrato = @idTipoContrato;
 
-    --Valida que si es de venta, solo se le pueda hacer una factura.
+    -- Si es de venta, solo una factura
     IF @nombreTipoContrato = 'Venta' 
        AND EXISTS (SELECT 1 FROM Factura WHERE idContrato = @idContrato)
       THROW 50017, 'No se pueden crear múltiples facturas para contratos de tipo Venta.', 1;
 
-      -- Si el contrato es de alquiler vemos que no haya sido pagado completamente.
+    -- Si es de alquiler, verificar que no esté completamente pagado
     IF @deposito IS NOT NULL AND @deposito > 0
     BEGIN
       DECLARE @totalPagado DECIMAL(18,2);
@@ -81,11 +81,11 @@ BEGIN
         THROW 50018, 'El contrato de alquiler ya ha sido pagado completamente. No se pueden emitir más facturas.', 1;
     END;
 
-    --  Cálculos
+    -- Calcular IVA y comisión
     SET @iva = ROUND(@montoPagado * (@porcentajeIVA / 100.0), 2);
     SET @montoComision = ROUND(@montoPagado * (@porcentajeComision / 100.0), 2);
 
-    --  Insertar factura
+    -- Insertar factura
     INSERT INTO Factura (
         montoPagado, 
         fechaEmision, 
@@ -101,7 +101,7 @@ BEGIN
     )
     VALUES (
         @montoPagado, 
-        DEFAULT,          
+        DEFAULT,           
         NULL,              
         0,                 
         @iva, 
@@ -117,9 +117,22 @@ BEGIN
     SET @idFactura = SCOPE_IDENTITY();
 
 
+    INSERT INTO FacturaCliente (idFactura, identificacion)
+    SELECT @idFactura, cc.identificacion
+    FROM ClienteContrato cc
+    WHERE cc.idContrato = @idContrato
+      AND NOT EXISTS (
+          SELECT 1 
+          FROM FacturaCliente fc
+          WHERE fc.idFactura = @idFactura
+            AND fc.identificacion = cc.identificacion
+      );
+
+    ----------------------------------------------------------
+
     COMMIT TRANSACTION;
 
-    --  Respuesta del SP
+    -- Respuesta
     SELECT 
         @idFactura AS idFactura,
         @idContrato AS idContrato,
