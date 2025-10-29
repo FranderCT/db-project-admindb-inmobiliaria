@@ -106,7 +106,7 @@ CREATE TABLE Contrato(
 	fechaInicio DATETIME NOT NULL, 
 	fechaFin DATETIME NOT NULL, 
 	fechaFirma DATETIME NOT NULL, 
-	fechaPago DATETIME NOT NULL,
+	fechaPago DATETIME NULL,
 	idTipoContrato INT NOT NULL,
 	idPropiedad INT NOT NULL, 
 	idAgente INT NOT NULL, 
