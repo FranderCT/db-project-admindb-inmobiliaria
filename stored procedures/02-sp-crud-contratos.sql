@@ -4,7 +4,7 @@ CREATE OR ALTER PROCEDURE sp_insertContratoConNuevasCondiciones
     @fechaInicio DATETIME,
     @fechaFin DATETIME,
     @fechaFirma DATETIME,
-    @fechaPago DATETIME,
+    @fechaPago DATETIME = NULL,
     @idTipoContrato INT,
     @idPropiedad INT,
     @idAgente INT,
@@ -32,6 +32,13 @@ BEGIN
             ELSE
                 SET @estado = 'Finalizado';
         END;
+
+
+       --- Manejo seguro de @fechaPago (acepta "", NULL o formato inválido)
+
+        IF TRY_CAST(@fechaPago AS DATETIME) IS NULL
+            SET @fechaPago = NULL;
+
 
         INSERT INTO Contrato (
             fechaInicio, fechaFin, fechaFirma, fechaPago,
@@ -71,7 +78,13 @@ BEGIN
     END TRY
     BEGIN CATCH
         IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
-        THROW;
+
+        DECLARE 
+            @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE(),
+            @ErrorSeverity INT = ERROR_SEVERITY(),
+            @ErrorState INT = ERROR_STATE();
+
+        RAISERROR(@ErrorMessage, @ErrorSeverity, @ErrorState);
     END CATCH
 END;
 GO
