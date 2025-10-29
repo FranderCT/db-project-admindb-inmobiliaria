@@ -9,6 +9,7 @@ create table Factura(
     fechaPago datetime null,
     estadoPago bit not null default 0,
     iva Decimal(18,2) not null,
+    porcentajeIva Decimal(5,2) null,
     idContrato int not null,
     idAgente int not null,
     idPropiedad int null,

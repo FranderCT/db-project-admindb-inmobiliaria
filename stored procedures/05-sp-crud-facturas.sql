@@ -85,13 +85,14 @@ BEGIN
     SET @iva = ROUND(@montoPagado * (@porcentajeIVA / 100.0), 2);
     SET @montoComision = ROUND(@montoPagado * (@porcentajeComision / 100.0), 2);
 
-    -- Insertar factura
+    -- Insertar factura 
     INSERT INTO Factura (
         montoPagado, 
         fechaEmision, 
         fechaPago,
         estadoPago, 
-        iva, 
+        iva,
+        porcentajeIva,        
         idContrato, 
         idAgente, 
         idPropiedad,
@@ -104,7 +105,8 @@ BEGIN
         DEFAULT,           
         NULL,              
         0,                 
-        @iva, 
+        @iva,
+        @porcentajeIva,    
         @idContrato, 
         @idAgente, 
         @idPropiedad,
@@ -116,7 +118,7 @@ BEGIN
     -- Guardar idFactura generado
     SET @idFactura = SCOPE_IDENTITY();
 
-
+    -- Inserción automática de clientes asociados al contrato
     INSERT INTO FacturaCliente (idFactura, identificacion)
     SELECT @idFactura, cc.identificacion
     FROM ClienteContrato cc
@@ -127,8 +129,6 @@ BEGIN
           WHERE fc.idFactura = @idFactura
             AND fc.identificacion = cc.identificacion
       );
-
-    ----------------------------------------------------------
 
     COMMIT TRANSACTION;
 
@@ -141,8 +141,8 @@ BEGIN
         @porcentajeComision AS porcentajeComision,
         @montoComision AS montoComision,
         @iva AS iva,
-        @porcentajeIVA AS porcentajeIVA,
-        'Factura creada correctamente' AS mensaje;
+        @porcentajeIva AS porcentajeIva, 
+        'Factura creada correctamente (clientes asociados automáticamente)' AS mensaje;
 
   END TRY
   BEGIN CATCH
@@ -175,6 +175,7 @@ BEGIN
         CONVERT(varchar(10), f.fechaPago, 23) AS fechaPago,
         f.estadoPago,
         c.idContrato,
+        f.porcentajeIva,
 
         -- Solo mostrar al cliente con rol relevante según el tipo de contrato
         ISNULL(
@@ -232,6 +233,7 @@ BEGIN
         CONVERT(varchar(10), f.fechaPago, 23) AS fechaPago,
         f.estadoPago,
         c.idContrato,
+        f.porcentajeIva,
 
         --Solo muestra el cliente que compra/alquila.
         ISNULL(
@@ -311,8 +313,10 @@ BEGIN
       @montoTotalContrato DECIMAL(18,2),
       @porcentajeComision DECIMAL(5,2),
       @montoComision DECIMAL(18,2),
-      @facturasPagadas INT;
+      @facturasPagadas INT,
+      @fechaPagoActual DATETIME;
 
+    -- Obtener datos base de la factura
     SELECT 
       @idContrato = idContrato,
       @idAgente = idAgente,
@@ -324,7 +328,7 @@ BEGIN
     IF @idContrato IS NULL
       THROW 50010, 'La factura no existe o no tiene contrato asociado.', 1;
 
-
+    -- Datos del contrato
     SELECT 
       @idTipoContrato = idTipoContrato,
       @deposito = deposito,
@@ -332,45 +336,49 @@ BEGIN
     FROM Contrato 
     WHERE idContrato = @idContrato;
 
+    -- Validar si ya fue pagada
     IF EXISTS (SELECT 1 FROM Factura WHERE idFactura = @idFactura AND estadoPago = 1)
       THROW 50011, 'Esta factura ya fue pagada.', 1;
 
+    -- Actualizar estado de la factura
+    SET @fechaPagoActual = GETDATE();
+
     UPDATE Factura
     SET estadoPago = 1,
-        fechaPago = GETDATE()
+        fechaPago = @fechaPagoActual
     WHERE idFactura = @idFactura;
 
+    UPDATE Contrato
+    SET fechaPago = @fechaPagoActual
+    WHERE idContrato = @idContrato;
+
+    -- Contar facturas pagadas de ese contrato
     SELECT @facturasPagadas = COUNT(*) 
     FROM Factura 
     WHERE idContrato = @idContrato AND estadoPago = 1;
 
-  
-    IF @idTipoContrato = 1  -- Contrato de Venta
+    -- Lógica para tipos de contrato
+    IF @idTipoContrato = 1  
     BEGIN
-        -- Calcular comisión
         SET @montoComision = ROUND(@montoFactura * (@porcentajeComision / 100.0), 2);
 
-        -- Insertar registro en Comision
         INSERT INTO Comision (idAgente, idFactura, idContrato, montoComision, porcentajeComision)
         VALUES (@idAgente, @idFactura, @idContrato, @montoComision, @porcentajeComision);
 
-        -- Acreditar comisión al agente
         UPDATE Agente
         SET comisionAcumulada = comisionAcumulada + @montoComision
         WHERE identificacion = @idAgente;
 
-        -- Finalizar contrato
         UPDATE Contrato 
-        SET estado = 'Finalizado' 
+        SET estado = 'Finalizado'
         WHERE idContrato = @idContrato;
     END
-    ELSE  -- 
+    ELSE 
     BEGIN
-        -- Si es la primera factura pagada, activar contrato y generar comisión
         IF @facturasPagadas = 1
         BEGIN
             UPDATE Contrato 
-            SET estado = 'Activo' 
+            SET estado = 'Activo'
             WHERE idContrato = @idContrato;
 
             SET @montoComision = ROUND(@montoFactura * (@porcentajeComision / 100.0), 2);
@@ -383,7 +391,6 @@ BEGIN
             WHERE identificacion = @idAgente;
         END
 
-        -- Si el total pagado ya cubre todo el contrato, finalizarlo
         DECLARE @totalPagado DECIMAL(18,2);
         SELECT @totalPagado = ISNULL(SUM(montoPagado), 0)
         FROM Factura 
@@ -396,12 +403,13 @@ BEGIN
         END
         ELSE
         BEGIN
-         UPDATE Contrato SET estado = 'Activo' WHERE idContrato = @idContrato;
+           UPDATE Contrato SET estado = 'Activo' WHERE idContrato = @idContrato;
         END
     END
 
     COMMIT TRANSACTION;
 
+    -- Retorno final
     SELECT 
         f.idFactura,
         f.idContrato,
@@ -411,6 +419,7 @@ BEGIN
         f.fechaPago,
         f.estadoPago,
         c.estado AS estadoContrato,
+        c.fechaPago AS fechaPagoContrato,  
         'Factura actualizada correctamente' AS mensaje
     FROM Factura f
     INNER JOIN Contrato c ON f.idContrato = c.idContrato
@@ -424,6 +433,7 @@ BEGIN
   END CATCH;
 END;
 GO
+
 
 
 
