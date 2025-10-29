@@ -1,3 +1,6 @@
+use AltosDelValle
+go
+
 --- Este sp sirve para establecer el contexto de la sesión con la información del usuario autenticado.
 CREATE OR ALTER PROCEDURE sp_SetSessionContext
   @correo NVARCHAR(150),

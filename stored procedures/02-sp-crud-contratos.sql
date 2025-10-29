@@ -1,3 +1,5 @@
+use AltosDelValle
+go
 
 -- SP_INSERT 
 CREATE OR ALTER PROCEDURE sp_insertContratoConNuevasCondiciones
@@ -91,7 +93,6 @@ GO
 
 -- SP_READ
 -----   sp_consultarContratosConCondiciones (vista previa)
-CREATE OR ALTER PROCEDURE sp_consultarContratosConCondiciones
     @idContrato INT = NULL
 AS
 BEGIN
@@ -242,14 +243,14 @@ BEGIN
       c.montoTotal, 
       c.deposito, 
       c.porcentajeComision, 
-      c.cantidadPagos,       -- ✅ Nuevo campo agregado
+      c.cantidadPagos,
       c.estado,
       c.idTipoContrato, 
       tc.nombre AS tipoContrato,
       c.idPropiedad, 
       c.idAgente,
 
-      -- 🔹 Propiedad asociada
+      -- Propiedad asociada
       JSON_QUERY((
         SELECT 
           p.idPropiedad, 
@@ -266,7 +267,7 @@ BEGIN
         FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
       )) AS propiedad,
 
-      -- 🔹 Participantes del contrato
+      -- Participantes del contrato
       JSON_QUERY((
         SELECT 
           cc.identificacion, 
@@ -282,7 +283,7 @@ BEGIN
         FOR JSON PATH
       )) AS participantes,
 
-      -- 🔹 Condiciones del contrato
+      -- Condiciones del contrato
       JSON_QUERY((
         SELECT 
           t.idCondicion, 
