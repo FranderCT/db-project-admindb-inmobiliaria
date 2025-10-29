@@ -106,7 +106,7 @@ CREATE TABLE Contrato(
 	fechaInicio DATETIME NOT NULL, 
 	fechaFin DATETIME NOT NULL, 
 	fechaFirma DATETIME NOT NULL, 
-	fechaPago DATETIME NOT NULL,
+	fechaPago DATETIME NULL,
 	idTipoContrato INT NOT NULL,
 	idPropiedad INT NOT NULL, 
 	idAgente INT NOT NULL, 
@@ -121,8 +121,9 @@ ADD
     deposito MONEY NULL,                -- depósito (si aplica, solo en alquiler)
     porcentajeComision DECIMAL(5,2) NULL, -- porcentaje de comisión del agente ejemplo (5.00 = 5%)
     estado NVARCHAR(30) DEFAULT 'Pendiente', -- estado del contrato (Pendiente, Activo, Finalizado, Cancelado)
-    idCondicion INT NULL                  -- referencia a términos y condiciones (si aplica)
+    cantidadPagos INT NULL -- número total de pagos (ej. 12 mensualidades)
 GO
+
 
 -- FOREIGN KEYS
 ALTER TABLE Contrato
