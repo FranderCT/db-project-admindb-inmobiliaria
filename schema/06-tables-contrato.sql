@@ -14,6 +14,7 @@ create table Contrato(
 	montoTotal MONEY NULL,
     deposito MONEY NULL,
     porcentajeComision DECIMAL(5,2) NULL,
+	cantidadPagos INT NULL, 
     estado NVARCHAR(30) DEFAULT 'Pendiente'
 )on Contratos
 go
