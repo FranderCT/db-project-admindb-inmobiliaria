@@ -4,7 +4,7 @@ CREATE TABLE AuditoriaContrato (
     fechaInicio DATETIME,
     fechaFin DATETIME,
     fechaFirma DATETIME,
-    fechaPago DATETIME,
+    fechaPago DATETIME NULL,
     idTipoContrato INT,
     idPropiedad INT,
     idAgente INT,
