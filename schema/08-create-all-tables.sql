@@ -201,6 +201,7 @@ CREATE TABLE Factura(
     fechaEmision DATETIME NOT NULL DEFAULT GetDate(),
     fechaPago DATETIME NULL,
     estadoPago BIT NOT NULL DEFAULT 0,
+	porcentajeIva DECIMAL(5,2) NULL,
     iva DECIMAL(18,2) NOT NULL,
     idContrato INT NOT NULL,
     idAgente INT NOT NULL,
