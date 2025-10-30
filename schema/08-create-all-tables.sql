@@ -63,7 +63,7 @@ GO
 
 -- PROPIEDAD
 CREATE TABLE Propiedad (
-    idPropiedad INT IDENTITY(1,1) PRIMARY KEY,
+    idPropiedad VARCHAR(20) PRIMARY KEY,  -- ← ahora será un código alfanumérico generado por trigger
     ubicacion VARCHAR(100) NOT NULL,
     precio MONEY NOT NULL,
     idEstado INT NOT NULL,
@@ -103,25 +103,20 @@ GO
 
 CREATE TABLE Contrato(
 	idContrato INT IDENTITY(1,1) NOT NULL,
-	fechaInicio DATETIME NOT NULL, 
-	fechaFin DATETIME NOT NULL, 
-	fechaFirma DATETIME NOT NULL, 
+	fechaInicio DATETIME NULL, 
+	fechaFin DATETIME  NULL, 
+	fechaFirma DATETIME NULL, 
 	fechaPago DATETIME NULL,
 	idTipoContrato INT NOT NULL,
-	idPropiedad INT NOT NULL, 
+	idPropiedad VARCHAR(20) NOT NULL, 
 	idAgente INT NOT NULL, 
-    CONSTRAINT pk_ContratoIdContrato PRIMARY KEY (idContrato)
-) ON Contratos;
-GO
-
------- SE AGREGAN NUEVAS COLUMNAS A LA TABLA CONTRATO PARA GESTIONAR MONTOS Y COMISIONES
-ALTER TABLE Contrato
-ADD 
     montoTotal MONEY NULL,              -- precio final (venta) o mensualidad (alquiler)
     deposito MONEY NULL,                -- depósito (si aplica, solo en alquiler)
     porcentajeComision DECIMAL(5,2) NULL, -- porcentaje de comisión del agente ejemplo (5.00 = 5%)
-    estado NVARCHAR(30) DEFAULT 'Pendiente', -- estado del contrato (Pendiente, Activo, Finalizado, Cancelado)
-    cantidadPagos INT NULL -- número total de pagos (ej. 12 mensualidades)
+    cantidadPagos INT NULL, -- número total de pagos (ej. 12 mensualidades)
+    estado NVARCHAR(30) DEFAULT 'Pendiente', -- estado del contrato (Pendiente, Activo, Finalizado)
+    CONSTRAINT pk_ContratoIdContrato PRIMARY KEY (idContrato)
+) ON Contratos;
 GO
 
 
@@ -201,11 +196,12 @@ CREATE TABLE Factura(
     fechaEmision DATETIME NOT NULL DEFAULT GetDate(),
     fechaPago DATETIME NULL,
     estadoPago BIT NOT NULL DEFAULT 0,
+	porcentajeIva DECIMAL(5,2) NULL,
     iva DECIMAL(18,2) NOT NULL,
     porcentajeIva DECIMAL(5,2) NULL,
     idContrato INT NOT NULL,
     idAgente INT NOT NULL,
-    idPropiedad INT NULL,
+    idPropiedad VARCHAR(20) NOT NULL,
     idTipoContrato INT NULL,
     montoComision DECIMAL(18,2) NOT NULL,
     porcentajeComision DECIMAL(5,2) NOT NULL,
