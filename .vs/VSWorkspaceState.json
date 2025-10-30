@@ -3,8 +3,7 @@
     "",
     "\\schema",
     "\\stored procedures",
-    "\\triggers",
-    "\\views"
+    "\\triggers"
   ],
   "SelectedNode": "\\schema\\00-create-database.sql",
   "PreviewInSolutionExplorer": false

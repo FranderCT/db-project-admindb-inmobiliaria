@@ -198,6 +198,7 @@ CREATE TABLE Factura(
     estadoPago BIT NOT NULL DEFAULT 0,
 	porcentajeIva DECIMAL(5,2) NULL,
     iva DECIMAL(18,2) NOT NULL,
+    porcentajeIva DECIMAL(5,2) NULL,
     idContrato INT NOT NULL,
     idAgente INT NOT NULL,
     idPropiedad VARCHAR(20) NOT NULL,
