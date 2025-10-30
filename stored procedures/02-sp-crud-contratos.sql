@@ -3,9 +3,9 @@ go
 
 -- SP_INSERT 
 CREATE OR ALTER PROCEDURE sp_insertContratoConNuevasCondiciones
-    @fechaInicio DATETIME,
-    @fechaFin DATETIME,
-    @fechaFirma DATETIME,
+    @fechaInicio DATETIME NULL,
+    @fechaFin DATETIME NULL,
+    @fechaFirma DATETIME NULL,
     @fechaPago DATETIME = NULL,
     @idTipoContrato INT,
     @idPropiedad INT,
@@ -36,11 +36,19 @@ BEGIN
         END;
 
 
-       --- Manejo seguro de @fechaPago (acepta "", NULL o formato inválido)
+       -- Manejo seguro de las fechas
 
-        IF TRY_CAST(@fechaPago AS DATETIME) IS NULL
-            SET @fechaPago = NULL;
+          IF TRY_CAST(@fechaInicio AS DATETIME) IS NULL
+              SET @fechaInicio = NULL;
 
+          IF TRY_CAST(@fechaFin AS DATETIME) IS NULL
+              SET @fechaFin = NULL;
+
+          IF TRY_CAST(@fechaFirma AS DATETIME) IS NULL
+              SET @fechaFirma = NULL;
+
+          IF TRY_CAST(@fechaPago AS DATETIME) IS NULL
+              SET @fechaPago = NULL;
 
         INSERT INTO Contrato (
             fechaInicio, fechaFin, fechaFirma, fechaPago,

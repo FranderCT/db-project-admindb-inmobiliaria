@@ -1,9 +1,9 @@
 CREATE TABLE AuditoriaContrato (
     idAuditoriaContrato INT IDENTITY PRIMARY KEY,
     idContrato INT,
-    fechaInicio DATETIME,
-    fechaFin DATETIME,
-    fechaFirma DATETIME,
+    fechaInicio DATETIME NULL,
+    fechaFin DATETIME NULL,
+    fechaFirma DATETIME NULL,
     fechaPago DATETIME NULL,
     idTipoContrato INT,
     idPropiedad INT,
@@ -18,6 +18,7 @@ CREATE TABLE AuditoriaContrato (
     host NVARCHAR(100)
 );
 GO
+
 
 CREATE OR ALTER TRIGGER tr_auditoria_contrato
 ON Contrato
