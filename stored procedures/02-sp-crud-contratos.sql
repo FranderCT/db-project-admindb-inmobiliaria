@@ -1,3 +1,5 @@
+use AltosDelValle
+go
 
 -- SP_INSERT 
 CREATE OR ALTER PROCEDURE sp_insertContratoConNuevasCondiciones
@@ -222,7 +224,6 @@ GO
 
 -- SP_DELETE
 
-
 ------   sp_detalleContrato (vista)
 CREATE OR ALTER PROCEDURE dbo.sp_detalleContrato
   @idContrato INT
@@ -242,14 +243,14 @@ BEGIN
       c.montoTotal, 
       c.deposito, 
       c.porcentajeComision, 
-      c.cantidadPagos,       -- ✅ Nuevo campo agregado
+      c.cantidadPagos,
       c.estado,
       c.idTipoContrato, 
       tc.nombre AS tipoContrato,
       c.idPropiedad, 
       c.idAgente,
 
-      -- 🔹 Propiedad asociada
+      -- Propiedad asociada
       JSON_QUERY((
         SELECT 
           p.idPropiedad, 
@@ -266,7 +267,7 @@ BEGIN
         FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
       )) AS propiedad,
 
-      -- 🔹 Participantes del contrato
+      -- Participantes del contrato
       JSON_QUERY((
         SELECT 
           cc.identificacion, 
@@ -282,7 +283,7 @@ BEGIN
         FOR JSON PATH
       )) AS participantes,
 
-      -- 🔹 Condiciones del contrato
+      -- Condiciones del contrato
       JSON_QUERY((
         SELECT 
           t.idCondicion, 
@@ -303,7 +304,6 @@ BEGIN
   SELECT @json AS data;
 END;
 GO
-
 
 
 ------   sp_detalleGeneralContrato (todo el contenido de un contrato)
@@ -332,7 +332,7 @@ BEGIN
       c.idPropiedad, 
       c.idAgente,
 
-      -- 🔹 Información de la propiedad
+      -- Información de la propiedad
       JSON_QUERY((
         SELECT 
           p.idPropiedad, 
@@ -361,7 +361,7 @@ BEGIN
         FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
       )) AS propiedad,
 
-      -- 🔹 Información del agente
+      -- Información del agente
       JSON_QUERY((
         SELECT 
           a.identificacion, 
@@ -374,7 +374,7 @@ BEGIN
         FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
       )) AS agente,
 
-      -- 🔹 Participantes del contrato
+      --  Participantes del contrato
       JSON_QUERY((
         SELECT 
           cl.identificacion, 
@@ -390,7 +390,7 @@ BEGIN
         FOR JSON PATH
       )) AS participantes,
 
-      -- 🔹 Condiciones del contrato
+      --  Condiciones del contrato
       JSON_QUERY((
         SELECT 
           t.idCondicion, 
@@ -413,9 +413,6 @@ END;
 GO
 
 
---TABLA TIPO CONTRATO 
-INSERT INTO TipoContrato (nombre) VALUES ('Venta'), ('Alquiler');
-GO
 
 ---TABLA TIPO CONTRATO
 
@@ -494,7 +491,9 @@ BEGIN
 END;
 GO
 
-
+--TABLA TIPO CONTRATO 
+INSERT INTO TipoContrato (nombre) VALUES ('Venta'), ('Alquiler');
+GO
 
 
 
