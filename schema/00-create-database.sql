@@ -1,6 +1,12 @@
 ---------------------------------------
 ----  Creación de la Base de Datos
-
+USE master;
+IF DB_ID('AltosDelValle') IS NOT NULL
+BEGIN
+    ALTER DATABASE AltosDelValle SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE AltosDelValle;
+END
+GO
 CREATE DATABASE AltosDelValle
 ON PRIMARY (
     NAME = 'AltosDelValle_Data',

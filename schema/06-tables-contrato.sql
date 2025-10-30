@@ -7,16 +7,17 @@ create table Contrato(
 	fechaInicio datetime not null, 
 	fechaFin datetime not null, 
 	fechaFirma datetime not null, 
-	fechaPago datetime not null,
+	fechaPago datetime null,
 	idTipoContrato int not null,
 	idPropiedad VARCHAR(20) null, 
 	idAgente int not null,
 	montoTotal MONEY NULL,
     deposito MONEY NULL,
     porcentajeComision DECIMAL(5,2) NULL,
+	cantidadPagos INT NULL, 
     estado NVARCHAR(30) DEFAULT 'Pendiente'
 )on Contratos
-go
+GO
 
 -- FOREIGN KEYS
 ALTER TABLE Contrato

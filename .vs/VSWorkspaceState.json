@@ -6,6 +6,6 @@
     "\\triggers",
     "\\views"
   ],
-  "SelectedNode": "\\stored procedures\\02-sp-crud-contratos.sql",
+  "SelectedNode": "\\schema\\00-create-database.sql",
   "PreviewInSolutionExplorer": false
 }
