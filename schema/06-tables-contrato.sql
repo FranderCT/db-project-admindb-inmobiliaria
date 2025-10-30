@@ -2,22 +2,23 @@ USE AltosDelValle
 GO
 
 --			TABLA CONTRATO
-create table Contrato(
+CREATE TABLE Contrato(
 	idContrato int identity (1,1)PRIMARY KEY not null,
-	fechaInicio datetime not null, 
-	fechaFin datetime not null, 
-	fechaFirma datetime not null, 
-	fechaPago datetime null,
-	idTipoContrato int not null,
-	idPropiedad int not null, 
-	idAgente int not null,
+	fechaInicio DATETIME NULL, 
+	fechaFin DATETIME NULL, 
+	fechaFirma DATETIME NULL, 
+	fechaPago DATETIME NULL,
+	idTipoContrato INT NOT NULL,
+	idPropiedad INT NOT NULL, 
+	idAgente INT NOT NULL,
 	montoTotal MONEY NULL,
     deposito MONEY NULL,
     porcentajeComision DECIMAL(5,2) NULL,
 	cantidadPagos INT NULL, 
     estado NVARCHAR(30) DEFAULT 'Pendiente'
-)on Contratos
+)ON Contratos
 GO
+
 
 -- FOREIGN KEYS
 ALTER TABLE Contrato
