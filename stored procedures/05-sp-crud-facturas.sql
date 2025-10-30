@@ -3,7 +3,7 @@ GO
 
 CREATE OR ALTER PROCEDURE dbo.sp_insertFactura
   @idContrato         INT,
-  @porcentajeIVA      DECIMAL(5,2) = 13.00,
+  @porcentajeIva      DECIMAL(5,2) = 13.00,
   @idFactura          INT OUTPUT
 AS
 BEGIN
@@ -19,17 +19,15 @@ BEGIN
       @idPropiedad INT,
       @idTipoContrato INT,
       @idAgente INT,
-      @deposito DECIMAL(18,2),
       @nombreTipoContrato VARCHAR(20);
 
-    --  Validar existencia del contrato y traer datos relevantes
+    -- Validar existencia del contrato y traer datos relevantes
     SELECT 
       @montoPagado = montoTotal,
       @porcentajeComision = porcentajeComision,
       @idPropiedad = idPropiedad,
       @idTipoContrato = idTipoContrato,
-      @idAgente = idAgente,
-      @deposito = deposito
+      @idAgente = idAgente
     FROM Contrato
     WHERE idContrato = @idContrato;
 
@@ -51,11 +49,11 @@ BEGIN
     IF @idAgente IS NULL
       THROW 50014, 'El contrato no tiene un agente asignado.', 1;
 
-    --  Validar agente
+    -- Validar agente
     IF NOT EXISTS (SELECT 1 FROM Agente WHERE identificacion = @idAgente)
       THROW 50014, 'El agente no existe.', 1;
 
-    -- Validar que el contrato tenga clientes asociados
+    -- Validar clientes asociados
     IF NOT EXISTS (SELECT 1 FROM ClienteContrato WHERE idContrato = @idContrato)
       THROW 50015, 'El contrato no tiene clientes asociados. No se puede emitir una factura.', 1;
 
@@ -64,13 +62,13 @@ BEGIN
     FROM TipoContrato 
     WHERE idTipoContrato = @idTipoContrato;
 
-    -- Si es de venta, solo una factura
+    -- Si es de venta, solo una factura permitida
     IF @nombreTipoContrato = 'Venta' 
        AND EXISTS (SELECT 1 FROM Factura WHERE idContrato = @idContrato)
       THROW 50017, 'No se pueden crear múltiples facturas para contratos de tipo Venta.', 1;
 
-    -- Si es de alquiler, verificar que no esté completamente pagado
-    IF @deposito IS NOT NULL AND @deposito > 0
+    -- Si es de alquiler, validar que no esté completamente pagado
+    IF @nombreTipoContrato = 'Alquiler'
     BEGIN
       DECLARE @totalPagado DECIMAL(18,2);
       SELECT @totalPagado = ISNULL(SUM(montoPagado), 0)
@@ -85,7 +83,7 @@ BEGIN
     SET @iva = ROUND(@montoPagado * (@porcentajeIVA / 100.0), 2);
     SET @montoComision = ROUND(@montoPagado * (@porcentajeComision / 100.0), 2);
 
-    -- Insertar factura 
+    -- Insertar factura
     INSERT INTO Factura (
         montoPagado, 
         fechaEmision, 
@@ -115,10 +113,17 @@ BEGIN
         @porcentajeComision
     );
 
-    -- Guardar idFactura generado
     SET @idFactura = SCOPE_IDENTITY();
 
-    -- Inserción automática de clientes asociados al contrato
+    --  Si el contrato es de tipo Venta, asignar fechaPago al contrato al crear la factura
+    IF @nombreTipoContrato = 'Venta'
+    BEGIN
+        UPDATE Contrato
+        SET fechaPago = GETDATE()
+        WHERE idContrato = @idContrato;
+    END;
+
+    -- Inserción automática de clientes asociados
     INSERT INTO FacturaCliente (idFactura, identificacion)
     SELECT @idFactura, cc.identificacion
     FROM ClienteContrato cc
@@ -132,7 +137,6 @@ BEGIN
 
     COMMIT TRANSACTION;
 
-    -- Respuesta
     SELECT 
         @idFactura AS idFactura,
         @idContrato AS idContrato,
@@ -142,6 +146,7 @@ BEGIN
         @montoComision AS montoComision,
         @iva AS iva,
         @porcentajeIva AS porcentajeIva, 
+        @nombreTipoContrato AS tipoContrato,
         'Factura creada correctamente (clientes asociados automáticamente)' AS mensaje;
 
   END TRY
@@ -370,7 +375,7 @@ BEGIN
         WHERE identificacion = @idAgente;
 
         UPDATE Contrato 
-        SET estado = 'Finalizado'
+        SET estado = 'Pagado'
         WHERE idContrato = @idContrato;
     END
     ELSE 
