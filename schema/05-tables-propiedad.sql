@@ -1,9 +1,9 @@
-use AltosDelValle
-go
+USE AltosDelValle;
+GO
 
 -- PROPIEDAD
 CREATE TABLE Propiedad (
-    idPropiedad INT IDENTITY(1,1) PRIMARY KEY,
+    idPropiedad VARCHAR(20) PRIMARY KEY,  -- ← ahora será un código alfanumérico generado por trigger
     ubicacion VARCHAR(100) NOT NULL,
     precio MONEY NOT NULL,
     idEstado INT NOT NULL,

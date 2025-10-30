@@ -63,7 +63,7 @@ GO
 
 -- PROPIEDAD
 CREATE TABLE Propiedad (
-    idPropiedad INT IDENTITY(1,1) PRIMARY KEY,
+    idPropiedad VARCHAR(20) PRIMARY KEY,  -- ← ahora será un código alfanumérico generado por trigger
     ubicacion VARCHAR(100) NOT NULL,
     precio MONEY NOT NULL,
     idEstado INT NOT NULL,
@@ -108,7 +108,7 @@ CREATE TABLE Contrato(
 	fechaFirma DATETIME NULL, 
 	fechaPago DATETIME NULL,
 	idTipoContrato INT NOT NULL,
-	idPropiedad INT NOT NULL, 
+	idPropiedad VARCHAR(20) NOT NULL, 
 	idAgente INT NOT NULL, 
     montoTotal MONEY NULL,              -- precio final (venta) o mensualidad (alquiler)
     deposito MONEY NULL,                -- depósito (si aplica, solo en alquiler)
@@ -196,10 +196,11 @@ CREATE TABLE Factura(
     fechaEmision DATETIME NOT NULL DEFAULT GetDate(),
     fechaPago DATETIME NULL,
     estadoPago BIT NOT NULL DEFAULT 0,
+	porcentajeIva DECIMAL(5,2) NULL,
     iva DECIMAL(18,2) NOT NULL,
     idContrato INT NOT NULL,
     idAgente INT NOT NULL,
-    idPropiedad INT NULL,
+    idPropiedad VARCHAR(20) NOT NULL,
     idTipoContrato INT NULL,
     montoComision DECIMAL(18,2) NOT NULL,
     porcentajeComision DECIMAL(5,2) NOT NULL,

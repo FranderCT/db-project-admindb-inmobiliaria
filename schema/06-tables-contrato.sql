@@ -12,10 +12,10 @@ CREATE TABLE Contrato(
 	idPropiedad INT NOT NULL, 
 	idAgente INT NOT NULL,
 	montoTotal MONEY NULL,
-    deposito MONEY NULL,
-    porcentajeComision DECIMAL(5,2) NULL,
+  deposito MONEY NULL,
+  porcentajeComision DECIMAL(5,2) NULL,
 	cantidadPagos INT NULL, 
-    estado NVARCHAR(30) DEFAULT 'Pendiente'
+  estado NVARCHAR(30) DEFAULT 'Pendiente'
 )ON Contratos
 GO
 
