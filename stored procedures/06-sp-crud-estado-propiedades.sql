@@ -29,7 +29,7 @@ BEGIN
 END
 GO
 
--- quiero elimninar todos los estados de propiedad del 1 al 8
+
 
 EXEC dbo.sp_insertEstadoPropiedad @nombre = 'Disponible';
 EXEC dbo.sp_insertEstadoPropiedad @nombre = 'Vendido';

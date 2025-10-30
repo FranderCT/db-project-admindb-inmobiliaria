@@ -27,3 +27,6 @@ BEGIN
 END
 GO
 
+
+EXEC dbo.sp_tipoInmuebleInsertar @nombre = 'Apartamento';
+GO
