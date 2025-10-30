@@ -224,7 +224,6 @@ GO
 
 -- SP_DELETE
 
-
 ------   sp_detalleContrato (vista)
 CREATE OR ALTER PROCEDURE dbo.sp_detalleContrato
   @idContrato INT
@@ -305,7 +304,6 @@ BEGIN
   SELECT @json AS data;
 END;
 GO
-
 
 
 ------   sp_detalleGeneralContrato (todo el contenido de un contrato)
@@ -415,9 +413,6 @@ END;
 GO
 
 
---TABLA TIPO CONTRATO 
-INSERT INTO TipoContrato (nombre) VALUES ('Venta'), ('Alquiler');
-GO
 
 ---TABLA TIPO CONTRATO
 
@@ -496,7 +491,9 @@ BEGIN
 END;
 GO
 
-
+--TABLA TIPO CONTRATO 
+INSERT INTO TipoContrato (nombre) VALUES ('Venta'), ('Alquiler');
+GO
 
 
 
