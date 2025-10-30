@@ -284,7 +284,7 @@ BEGIN
     GROUP BY 
         f.idFactura, tc.nombre, p.idPropiedad, a.nombre, a.apellido1,
         f.porcentajeComision, f.fechaEmision, f.fechaPago,
-        f.estadoPago, c.idContrato, f.montoPagado
+        f.estadoPago, c.idContrato, f.montoPagado, f.porcentajeIva
     ORDER BY f.idFactura DESC;
 END;
 GO
