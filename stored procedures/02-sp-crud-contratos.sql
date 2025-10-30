@@ -93,6 +93,7 @@ GO
 
 -- SP_READ
 -----   sp_consultarContratosConCondiciones (vista previa)
+CREATE OR ALTER PROCEDURE sp_consultarContratosConCondiciones
     @idContrato INT = NULL
 AS
 BEGIN
@@ -223,7 +224,6 @@ GO
 
 -- SP_DELETE
 
-
 ------   sp_detalleContrato (vista)
 CREATE OR ALTER PROCEDURE dbo.sp_detalleContrato
   @idContrato INT
@@ -306,7 +306,6 @@ END;
 GO
 
 
-
 ------   sp_detalleGeneralContrato (todo el contenido de un contrato)
 CREATE OR ALTER PROCEDURE dbo.sp_detalleGeneralContrato
   @idContrato INT
@@ -333,7 +332,7 @@ BEGIN
       c.idPropiedad, 
       c.idAgente,
 
-      -- 🔹 Información de la propiedad
+      -- Información de la propiedad
       JSON_QUERY((
         SELECT 
           p.idPropiedad, 
@@ -362,7 +361,7 @@ BEGIN
         FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
       )) AS propiedad,
 
-      -- 🔹 Información del agente
+      -- Información del agente
       JSON_QUERY((
         SELECT 
           a.identificacion, 
@@ -375,7 +374,7 @@ BEGIN
         FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
       )) AS agente,
 
-      -- 🔹 Participantes del contrato
+      --  Participantes del contrato
       JSON_QUERY((
         SELECT 
           cl.identificacion, 
@@ -391,7 +390,7 @@ BEGIN
         FOR JSON PATH
       )) AS participantes,
 
-      -- 🔹 Condiciones del contrato
+      --  Condiciones del contrato
       JSON_QUERY((
         SELECT 
           t.idCondicion, 
@@ -414,9 +413,6 @@ END;
 GO
 
 
---TABLA TIPO CONTRATO 
-INSERT INTO TipoContrato (nombre) VALUES ('Venta'), ('Alquiler');
-GO
 
 ---TABLA TIPO CONTRATO
 
@@ -495,7 +491,9 @@ BEGIN
 END;
 GO
 
-
+--TABLA TIPO CONTRATO 
+INSERT INTO TipoContrato (nombre) VALUES ('Venta'), ('Alquiler');
+GO
 
 
 
