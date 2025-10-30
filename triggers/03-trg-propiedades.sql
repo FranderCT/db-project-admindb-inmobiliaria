@@ -1,5 +1,4 @@
--- TRIGGERS TABLA PROPIEDAD
-use AltosDelValle;
+USE AltosDelValle;
 GO
 CREATE TRIGGER trg_GenerarCodigoPropiedad
 ON Propiedad
@@ -8,14 +7,23 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @nextNum INT;
+    -- Obtener la fecha actual en formato YYYYMM
+    DECLARE @fechaActual VARCHAR(6) = FORMAT(GETDATE(), 'yyyyMM');
 
-    SELECT @nextNum = ISNULL(MAX(CAST(SUBSTRING(idPropiedad, 6, LEN(idPropiedad)) AS INT)), 0) + 1
-    FROM Propiedad;
+    -- Obtener el último número consecutivo generado en el mes actual
+    DECLARE @ultimoConsecutivo INT = ISNULL((
+        SELECT MAX(CAST(SUBSTRING(CAST(idPropiedad AS VARCHAR(20)), 7, 4) AS INT)) 
+        FROM Propiedad
+        WHERE SUBSTRING(CAST(idPropiedad AS VARCHAR(20)), 1, 6) = @fechaActual
+    ), 0);
 
+    -- Generar el nuevo número de propiedad basado en el consecutivo
+    DECLARE @nuevoCodigo INT = CAST(@fechaActual AS INT) * 10000 + (@ultimoConsecutivo + 1);
+
+    -- Insertar la propiedad con el nuevo idPropiedad generado
     INSERT INTO Propiedad (idPropiedad, ubicacion, precio, idEstado, idTipoInmueble, identificacion)
     SELECT 
-        'PROP-' + RIGHT('0000' + CAST(@nextNum AS VARCHAR(4)), 4),
+        @nuevoCodigo,  -- Nuevo idPropiedad generado
         ubicacion,
         precio,
         idEstado,

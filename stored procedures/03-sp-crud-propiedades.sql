@@ -63,7 +63,7 @@ go
 USE AltosDelValle
 GO
 create or alter procedure sp_updatePropiedad
-  @_idPropiedad      int,
+  @_idPropiedad      INT,
   @_ubicacion        varchar(100),
   @_precio           money,
   @_idEstado         int,
@@ -160,7 +160,7 @@ go
 USE AltosDelValle
 GO
 create or alter procedure sp_updateEstadoPropiedad
-  @_idPropiedad   int,
+  @_idPropiedad   INT,
   @_idEstadoNuevo int
 as
 begin

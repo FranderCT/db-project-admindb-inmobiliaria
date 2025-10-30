@@ -3,7 +3,7 @@ GO
 
 -- PROPIEDAD
 CREATE TABLE Propiedad (
-    idPropiedad VARCHAR(20) PRIMARY KEY,  -- ← ahora será un código alfanumérico generado por trigger
+    idPropiedad INT PRIMARY KEY,  -- ← ahora será un código alfanumérico generado por trigger
     ubicacion VARCHAR(100) NOT NULL,
     precio MONEY NOT NULL,
     idEstado INT NOT NULL,

@@ -9,7 +9,7 @@ create table Contrato(
 	fechaFirma datetime not null, 
 	fechaPago datetime null,
 	idTipoContrato int not null,
-	idPropiedad VARCHAR(20) null, 
+	idPropiedad int null, 
 	idAgente int not null,
 	montoTotal MONEY NULL,
     deposito MONEY NULL,
