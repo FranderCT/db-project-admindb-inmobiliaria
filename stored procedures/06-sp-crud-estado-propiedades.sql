@@ -31,13 +31,10 @@ GO
 
 
 
-EXEC dbo.sp_insertEstadoPropiedad @nombre = 'Disponible';
-EXEC dbo.sp_insertEstadoPropiedad @nombre = 'Vendido';
-EXEC dbo.sp_insertEstadoPropiedad @nombre = 'Alquilado';
-EXEC dbo.sp_insertEstadoPropiedad @nombre = 'Reservado';
-EXEC dbo.sp_insertEstadoPropiedad @nombre = 'En Mantenimiento';
-EXEC dbo.sp_insertEstadoPropiedad @nombre = 'No Disponible';
-EXEC dbo.sp_insertEstadoPropiedad @nombre = 'Pendiente de Pago';
-EXEC dbo.sp_insertEstadoPropiedad @nombre = 'Archivado';
+EXEC dbo.sp_insertEstadoPropiedad @nombre = 'disponible';
+EXEC dbo.sp_insertEstadoPropiedad @nombre = 'reservada';
+EXEC dbo.sp_insertEstadoPropiedad @nombre = 'en mantenimiento';
+EXEC dbo.sp_insertEstadoPropiedad @nombre = 'vendida';
 
+select * from EstadoPropiedad;
 
