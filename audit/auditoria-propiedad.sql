@@ -1,6 +1,6 @@
 CREATE TABLE AuditoriaPropiedad (
     idAuditoriaPropiedad INT IDENTITY PRIMARY KEY,
-    idPropiedad INT,
+    idPropiedad int,
     ubicacion VARCHAR(100),
     precio MONEY,
     idEstado INT,

@@ -1,6 +1,7 @@
 -- TRIGGERS TABLA PROPIEDAD
 use AltosDelValle;
 GO
+
 CREATE TRIGGER trg_GenerarCodigoPropiedad
 ON Propiedad
 INSTEAD OF INSERT
