@@ -1,26 +1,26 @@
 USE master;
 GO
-CREATE LOGIN usuarioCliente 
-WITH PASSWORD = 'Cliente123!',
+
+CREATE LOGIN adminAltosDelValle 
+WITH PASSWORD = 'Frander123!',
     CHECK_POLICY = ON,
     CHECK_EXPIRATION = OFF;
 GO
 
 USE AltosDelValle;
 GO
-CREATE USER usuarioCliente FOR LOGIN usuarioCliente;
+
+CREATE USER adminAltosDelValle FOR LOGIN adminAltosDelValle;
 GO
 
-CREATE ROLE rolClienteUsuario;
+GRANT EXECUTE ON SCHEMA::dbo TO adminAltosDelValle;
 GO
 
-GRANT SELECT, INSERT, UPDATE ON dbo.Cliente  TO rolClienteUsuario;
-GRANT SELECT, INSERT, UPDATE ON dbo.TipoRol TO rolClienteUsuario;
+GRANT SELECT ON SCHEMA::dbo TO adminAltosDelValle;
 GO
 
-EXEC sp_addrolemember 'rolClienteUsuario', 'usuarioCliente';
+GRANT EXECUTE ON SCHEMA::dbo TO adminAltosDelValle;
 GO
 
-
-select * from Propiedad
+GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA::dbo TO adminAltosDelValle;
 GO
