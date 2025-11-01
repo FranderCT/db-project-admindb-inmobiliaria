@@ -1,23 +1,23 @@
 USE AltosDelValle
 GO
 
---			TABLA FACTURA
-create table Factura(
-    idFactura int identity (1,1) not null,
-    montoPagado Decimal(18,2) not null,
-    fechaEmision datetime not null default GetDate(),
-    fechaPago datetime null,
-    estadoPago bit not null default 0,
-    iva Decimal(18,2) not null,
-    porcentajeIva Decimal(5,2) null,
-    idContrato int not null,
-    idAgente int not null,
-    idPropiedad int null,
-    idTipoContrato int null,
-    montoComision Decimal(18,2) not null,
-    porcentajeComision Decimal(5,2) not null
-
-)On Facturas
+-- FACTURA (Contrato, Agente)
+CREATE TABLE Factura(
+    idFactura INT IDENTITY(1,1) NOT NULL,
+    montoPagado DECIMAL(18,2) NOT NULL,
+    fechaEmision DATETIME NOT NULL DEFAULT GetDate(),
+    fechaPago DATETIME NULL,
+    estadoPago BIT NOT NULL DEFAULT 0,
+	porcentajeIva DECIMAL(5,2) NULL,
+    iva DECIMAL(18,2) NOT NULL,
+    idContrato INT NOT NULL,
+    idAgente INT NOT NULL,
+    idPropiedad VARCHAR(20) NOT NULL,
+    idTipoContrato INT NULL,
+    montoComision DECIMAL(18,2) NOT NULL,
+    porcentajeComision DECIMAL(5,2) NOT NULL,
+    CONSTRAINT pk_FacturaIdFactura PRIMARY KEY (idFactura)
+) ON Facturas;
 GO
 
 ALTER TABLE Factura
@@ -46,7 +46,7 @@ ADD CONSTRAINT ck_Factura_Iva_Positivo CHECK (iva >= 0);
 
 ALTER TABLE Factura
 ADD CONSTRAINT ck_Factura_MontoComision_Positivo CHECK (montoComision >= 0);
-    
+
 ALTER TABLE Factura
 ADD CONSTRAINT ck_Factura_FechaEmision_Valida
 CHECK (fechaEmision <= GETDATE() AND fechaEmision >= '2000-01-01');
@@ -71,8 +71,8 @@ CREATE TABLE FacturaCliente (
 );
 GO
 
+--    TABLA COMISION
 
---        TABLA COMISION
 create table Comision(
     idComision int identity(1,1), 
     idAgente int not null,
@@ -107,10 +107,12 @@ GO
 -- CHECKS
 
 ALTER TABLE Comision
-ADD CONSTRAINT ck_Comision_Monto_Positivo CHECK (montoComision >= 0);
+ADD CONSTRAINT ck_Comision_Monto_Positivo
+CHECK (montoComision >= 0);
 
 ALTER TABLE Comision
-ADD CONSTRAINT ck_Comision_Porcentaje_Rango CHECK (porcentajeComision >= 0 AND porcentajeComision <= 100);
+ADD CONSTRAINT ck_Comision_Porcentaje_Rango
+CHECK (porcentajeComision >= 0 AND porcentajeComision <= 100);
 
 ALTER TABLE Comision
 ADD CONSTRAINT ck_Comision_Estado_Valido
@@ -125,7 +127,6 @@ ADD CONSTRAINT ck_Comision_IdContrato_Pos CHECK (idContrato > 0);
 ALTER TABLE Comision
 ADD CONSTRAINT ck_Comision_IdFactura_Pos CHECK (idFactura > 0);
 GO
-
 
 USE AltosDelValle
 GO
