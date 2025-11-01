@@ -61,9 +61,12 @@ CREATE TABLE Agente (
 GO
 
 
+USE AltosDelValle;
+GO
+
 -- PROPIEDAD
 CREATE TABLE Propiedad (
-    idPropiedad VARCHAR(20) PRIMARY KEY,  -- ← ahora será un código alfanumérico generado por trigger
+    idPropiedad int identity(1,1) PRIMARY KEY,  
     ubicacion VARCHAR(100) NOT NULL,
     precio MONEY NOT NULL,
     idEstado INT NOT NULL,
@@ -100,23 +103,22 @@ ADD CONSTRAINT CHK_Propiedad_Precio_Pos CHECK (precio > 0);
 ALTER TABLE Propiedad
 ADD CONSTRAINT CHK_Propiedad_Ubicacion_Longitud CHECK (LEN(ubicacion) >= 5);
 GO
-
+--			TABLA CONTRATO
 CREATE TABLE Contrato(
-	idContrato INT IDENTITY(1,1) NOT NULL,
+	idContrato int identity (1,1)PRIMARY KEY not null,
 	fechaInicio DATETIME NULL, 
-	fechaFin DATETIME  NULL, 
+	fechaFin DATETIME NULL, 
 	fechaFirma DATETIME NULL, 
 	fechaPago DATETIME NULL,
 	idTipoContrato INT NOT NULL,
-	idPropiedad VARCHAR(20) NOT NULL, 
-	idAgente INT NOT NULL, 
-    montoTotal MONEY NULL,              -- precio final (venta) o mensualidad (alquiler)
-    deposito MONEY NULL,                -- depósito (si aplica, solo en alquiler)
-    porcentajeComision DECIMAL(5,2) NULL, -- porcentaje de comisión del agente ejemplo (5.00 = 5%)
-    cantidadPagos INT NULL, -- número total de pagos (ej. 12 mensualidades)
-    estado NVARCHAR(30) DEFAULT 'Pendiente', -- estado del contrato (Pendiente, Activo, Finalizado)
-    CONSTRAINT pk_ContratoIdContrato PRIMARY KEY (idContrato)
-) ON Contratos;
+	idPropiedad INT NOT NULL, 
+	idAgente INT NOT NULL,
+	montoTotal MONEY NULL,
+  deposito MONEY NULL,
+  porcentajeComision DECIMAL(5,2) NULL,
+	cantidadPagos INT NULL, 
+  estado NVARCHAR(30) DEFAULT 'Pendiente'
+)ON Contratos
 GO
 
 
@@ -167,27 +169,30 @@ ADD CONSTRAINT CK_Contrato_IdPropiedad_Pos CHECK (idPropiedad IS NULL OR idPropi
 ALTER TABLE Contrato 
 ADD CONSTRAINT CK_Contrato_IdAgente_Pos CHECK (idAgente IS NULL OR idAgente > 0);
 
--- CLIENTE CONTRATO (Cliente, TipoRol, Contrato)
+
+-- TABLA CLIENTE CONTRATO
 CREATE TABLE ClienteContrato (
     idClienteContrato INT IDENTITY(1,1) PRIMARY KEY,
     identificacion INT NOT NULL,
     idRol INT NOT NULL,
-    idContrato INT NOT NULL,
+    idContrato INT NOT NULL
+    -- Foreign keys
     CONSTRAINT FK_ClienteContrato_Cliente FOREIGN KEY (identificacion) REFERENCES Cliente(identificacion),
     CONSTRAINT FK_ClienteContrato_TipoRol FOREIGN KEY (idRol) REFERENCES TipoRol(idRol),
     CONSTRAINT FK_ClienteContrato_Contrato FOREIGN KEY (idContrato) REFERENCES Contrato(idContrato)
-);
+)
 GO
 
--- CONTRATO TERMINOS (Contrato, TerminosCondiciones)
+-- TABLA CONTRATO TERMINOS
 CREATE TABLE ContratoTerminos (
     idContratoTerminos INT IDENTITY(1,1) PRIMARY KEY,
     idCondicion INT NOT NULL,
-    idContrato INT NOT NULL,
+    idContrato INT NOT NULL
+    -- Foreign keys
     CONSTRAINT FK_ContratoTerminos_TerminosCondiciones FOREIGN KEY (idCondicion) REFERENCES TerminosCondiciones(idCondicion),
     CONSTRAINT FK_ContratoTerminos_Contrato FOREIGN KEY (idContrato) REFERENCES Contrato(idContrato)
 );
-GO
+
 
 -- FACTURA (Contrato, Agente)
 CREATE TABLE Factura(
@@ -200,7 +205,7 @@ CREATE TABLE Factura(
     iva DECIMAL(18,2) NOT NULL,
     idContrato INT NOT NULL,
     idAgente INT NOT NULL,
-    idPropiedad VARCHAR(20) NOT NULL,
+    idPropiedad int NOT NULL,
     idTipoContrato INT NULL,
     montoComision DECIMAL(18,2) NOT NULL,
     porcentajeComision DECIMAL(5,2) NOT NULL,
