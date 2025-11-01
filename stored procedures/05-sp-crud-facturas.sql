@@ -2,47 +2,62 @@ USE AltosDelValle;
 GO
 
 CREATE OR ALTER PROCEDURE dbo.sp_insertFactura
-  @idContrato         INT,
-  @porcentajeIVA      DECIMAL(5,2) = 13.00,
-  @idFactura          INT OUTPUT
+  @idContrato     INT,
+  @porcentajeIva  DECIMAL(5,2) = 13.00,
+  @idFactura      INT OUTPUT
 AS
 BEGIN
   SET NOCOUNT ON;
+
   BEGIN TRY
     BEGIN TRANSACTION;
 
     DECLARE 
-      @montoPagado DECIMAL(18,2),
-      @porcentajeComision DECIMAL(5,2),
-      @montoComision DECIMAL(18,2),
-      @iva DECIMAL(18,2),
-      @idPropiedad INT,
-      @idTipoContrato INT,
-      @idAgente INT,
-      @deposito DECIMAL(18,2),
-      @nombreTipoContrato VARCHAR(20);
+      @montoTotalContrato   DECIMAL(18,2),
+      @montoFactura         DECIMAL(18,2),
+      @porcentajeComision   DECIMAL(5,2),
+      @montoComision        DECIMAL(18,2),
+      @iva                  DECIMAL(18,2),
+      @idPropiedad          INT,
+      @idTipoContrato       INT,
+      @idAgente             INT,
+      @nombreTipoContrato   VARCHAR(20),
+      @cantidadPagos        INT,
+      @facturasEmitidas     INT,
+      @totalEmitido         DECIMAL(18,2),
+      @fechaPagoContrato    DATETIME,
+      @idEstadoVendida      INT,
+      @idEstadoReservada    INT;
 
-    --  Validar existencia del contrato y traer datos relevantes
-    SELECT 
-      @montoPagado = montoTotal,
-      @porcentajeComision = porcentajeComision,
-      @idPropiedad = idPropiedad,
-      @idTipoContrato = idTipoContrato,
-      @idAgente = idAgente,
-      @deposito = deposito
-    FROM Contrato
-    WHERE idContrato = @idContrato;
+    /* ===== Obtener IDs de estado de propiedad ===== */
+    SELECT @idEstadoVendida = idEstadoPropiedad FROM EstadoPropiedad WHERE nombre = 'Vendida';
+    SELECT @idEstadoReservada = idEstadoPropiedad FROM EstadoPropiedad WHERE nombre = 'Reservada';
 
+    IF @idEstadoVendida IS NULL OR @idEstadoReservada IS NULL
+      THROW 50008, 'No se encontraron los estados de propiedad requeridos (Vendida / Reservada).', 1;
+
+    /* ===== Validaciones base y lectura de contrato ===== */
     IF NOT EXISTS (SELECT 1 FROM Contrato WHERE idContrato = @idContrato)
       THROW 50009, 'El contrato indicado no existe.', 1;
 
-    IF @montoPagado IS NULL OR @montoPagado <= 0
+    SELECT 
+      @montoTotalContrato  = CAST(montoTotal AS DECIMAL(18,2)),
+      @porcentajeComision  = porcentajeComision,
+      @idPropiedad         = idPropiedad,
+      @idTipoContrato      = idTipoContrato,
+      @idAgente            = idAgente,
+      @cantidadPagos       = cantidadPagos,
+      @fechaPagoContrato   = fechaPago
+    FROM Contrato
+    WHERE idContrato = @idContrato;
+
+    IF @montoTotalContrato IS NULL OR @montoTotalContrato <= 0
       THROW 50010, 'El contrato no tiene un monto total válido.', 1;
 
     IF @porcentajeComision IS NULL OR @porcentajeComision < 0 OR @porcentajeComision > 100
       THROW 50011, 'El contrato no tiene un porcentaje de comisión válido.', 1;
 
-    IF @porcentajeIVA IS NULL OR @porcentajeIVA < 0 OR @porcentajeIVA > 100
+    IF @porcentajeIva IS NULL OR @porcentajeIva < 0 OR @porcentajeIva > 100
       THROW 50012, 'El porcentaje de IVA debe estar entre 0 y 100.', 1;
 
     IF @idPropiedad IS NULL OR @idTipoContrato IS NULL
@@ -51,105 +66,126 @@ BEGIN
     IF @idAgente IS NULL
       THROW 50014, 'El contrato no tiene un agente asignado.', 1;
 
-    --  Validar agente
     IF NOT EXISTS (SELECT 1 FROM Agente WHERE identificacion = @idAgente)
       THROW 50014, 'El agente no existe.', 1;
 
-    -- Validar que el contrato tenga clientes asociados
     IF NOT EXISTS (SELECT 1 FROM ClienteContrato WHERE idContrato = @idContrato)
       THROW 50015, 'El contrato no tiene clientes asociados. No se puede emitir una factura.', 1;
 
-    -- Obtener nombre del tipo de contrato
-    SELECT @nombreTipoContrato = nombre 
-    FROM TipoContrato 
+    SELECT @nombreTipoContrato = nombre
+    FROM TipoContrato
     WHERE idTipoContrato = @idTipoContrato;
 
-    -- Si es de venta, solo una factura
-    IF @nombreTipoContrato = 'Venta' 
-       AND EXISTS (SELECT 1 FROM Factura WHERE idContrato = @idContrato)
-      THROW 50017, 'No se pueden crear múltiples facturas para contratos de tipo Venta.', 1;
-
-    -- Si es de alquiler, verificar que no esté completamente pagado
-    IF @deposito IS NOT NULL AND @deposito > 0
+    /* ===== Reglas por tipo de contrato ===== */
+    IF @nombreTipoContrato = 'Venta'
     BEGIN
-      DECLARE @totalPagado DECIMAL(18,2);
-      SELECT @totalPagado = ISNULL(SUM(montoPagado), 0)
+      IF EXISTS (SELECT 1 FROM Factura WHERE idContrato = @idContrato)
+        THROW 50017, 'No se pueden crear múltiples facturas para contratos de tipo Venta.', 1;
+
+      SET @montoFactura = @montoTotalContrato;
+
+      -- Actualizar contrato como Finalizado al crear factura
+      UPDATE Contrato
+      SET estado = 'Finalizado', fechaPago = GETDATE()
+      WHERE idContrato = @idContrato;
+
+      -- Marcar propiedad como Vendida (usando idEstado)
+      UPDATE Propiedad
+      SET idEstado = @idEstadoVendida
+      WHERE idPropiedad = @idPropiedad;
+    END
+    ELSE IF @nombreTipoContrato = 'Alquiler'
+    BEGIN
+      IF @cantidadPagos IS NULL OR @cantidadPagos <= 0
+        THROW 50019, 'El contrato de alquiler no tiene una cantidad de pagos válida.', 1;
+
+      IF @fechaPagoContrato IS NOT NULL AND CONVERT(date, GETDATE()) < CONVERT(date, @fechaPagoContrato)
+        THROW 50025, 'No puede crear una factura antes de la fecha de pago establecida en el contrato.', 1;
+
+      SELECT 
+        @facturasEmitidas = COUNT(*),
+        @totalEmitido     = ISNULL(SUM(CAST(montoPagado AS DECIMAL(18,2))), 0)
       FROM Factura
-      WHERE idContrato = @idContrato AND estadoPago = 1;
+      WHERE idContrato = @idContrato;
 
-      IF @totalPagado >= @montoPagado
-        THROW 50018, 'El contrato de alquiler ya ha sido pagado completamente. No se pueden emitir más facturas.', 1;
-    END;
+      IF @facturasEmitidas >= @cantidadPagos
+        THROW 50020, 'Ya se han generado todas las facturas correspondientes a este contrato de alquiler.', 1;
 
-    -- Calcular IVA y comisión
-    SET @iva = ROUND(@montoPagado * (@porcentajeIVA / 100.0), 2);
-    SET @montoComision = ROUND(@montoPagado * (@porcentajeComision / 100.0), 2);
+      DECLARE @cuota DECIMAL(18,2) = ROUND(@montoTotalContrato / @cantidadPagos, 2);
 
-    -- Insertar factura 
+      IF @facturasEmitidas = (@cantidadPagos - 1)
+        SET @montoFactura = @montoTotalContrato - @totalEmitido;
+      ELSE
+        SET @montoFactura = @cuota;
+
+      IF @montoFactura <= 0
+        THROW 50021, 'El monto calculado para la factura de alquiler no es válido.', 1;
+
+      -- Si es la primera factura => activar contrato
+      IF @facturasEmitidas = 0
+      BEGIN
+        UPDATE Contrato
+        SET estado = 'Activo'
+        WHERE idContrato = @idContrato;
+      END
+
+      -- Marcar propiedad como Reservada
+      UPDATE Propiedad
+      SET idEstado = @idEstadoReservada
+      WHERE idPropiedad = @idPropiedad;
+    END
+    ELSE
+      THROW 50022, 'Tipo de contrato desconocido.', 1;
+
+    /* ===== Cálculos de IVA y comisión ===== */
+    SET @iva = ROUND(@montoFactura * (@porcentajeIva / 100.0), 2);
+    SET @montoComision = ROUND(@montoFactura * (@porcentajeComision / 100.0), 2);
+
+    /* ===== Insert de factura ===== */
     INSERT INTO Factura (
-        montoPagado, 
-        fechaEmision, 
-        fechaPago,
-        estadoPago, 
-        iva,
-        porcentajeIva,        
-        idContrato, 
-        idAgente, 
-        idPropiedad,
-        idTipoContrato,
-        montoComision, 
-        porcentajeComision
+        montoPagado, fechaEmision, fechaPago, estadoPago,
+        iva, porcentajeIva, idContrato, idAgente,
+        idPropiedad, idTipoContrato, montoComision, porcentajeComision
     )
     VALUES (
-        @montoPagado, 
-        DEFAULT,           
-        NULL,              
-        0,                 
-        @iva,
-        @porcentajeIva,    
-        @idContrato, 
-        @idAgente, 
-        @idPropiedad,
-        @idTipoContrato,
-        @montoComision, 
-        @porcentajeComision
+        @montoFactura, DEFAULT, NULL, 0,
+        @iva, @porcentajeIva, @idContrato, @idAgente,
+        @idPropiedad, @idTipoContrato, @montoComision, @porcentajeComision
     );
 
-    -- Guardar idFactura generado
     SET @idFactura = SCOPE_IDENTITY();
 
-    -- Inserción automática de clientes asociados al contrato
+    /* ===== Asociar automáticamente los clientes del contrato ===== */
     INSERT INTO FacturaCliente (idFactura, identificacion)
     SELECT @idFactura, cc.identificacion
     FROM ClienteContrato cc
     WHERE cc.idContrato = @idContrato
       AND NOT EXISTS (
-          SELECT 1 
-          FROM FacturaCliente fc
-          WHERE fc.idFactura = @idFactura
-            AND fc.identificacion = cc.identificacion
+          SELECT 1 FROM FacturaCliente fc
+          WHERE fc.idFactura = @idFactura AND fc.identificacion = cc.identificacion
       );
 
     COMMIT TRANSACTION;
 
-    -- Respuesta
     SELECT 
-        @idFactura AS idFactura,
-        @idContrato AS idContrato,
-        @idAgente AS idAgente,
-        @montoPagado AS montoPagado,
-        @porcentajeComision AS porcentajeComision,
-        @montoComision AS montoComision,
-        @iva AS iva,
-        @porcentajeIva AS porcentajeIva, 
-        'Factura creada correctamente (clientes asociados automáticamente)' AS mensaje;
+      @idFactura AS idFactura,
+      @idContrato AS idContrato,
+      @idAgente AS idAgente,
+      @nombreTipoContrato AS tipoContrato,
+      @montoFactura AS montoFactura,
+      @cantidadPagos AS cantidadPagos,
+      @porcentajeComision AS porcentajeComision,
+      @montoComision AS montoComision,
+      @iva AS iva,
+      @porcentajeIva AS porcentajeIva,
+      'Factura creada correctamente' AS mensaje;
 
   END TRY
   BEGIN CATCH
     IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
     DECLARE @msg NVARCHAR(4000) = ERROR_MESSAGE();
     THROW 50099, @msg, 1;
-  END CATCH;
+  END CATCH
 END;
 GO
 
@@ -169,6 +205,7 @@ BEGIN
         f.idFactura,
         tc.nombre AS tipoContrato,
         p.idPropiedad,
+        p.ubicacion,
         CONCAT(a.nombre, ' ', a.apellido1) AS nombreAgente,
         f.porcentajeComision,
         CONVERT(varchar(10), f.fechaEmision, 23) AS fechaEmision,
@@ -176,8 +213,6 @@ BEGIN
         f.estadoPago,
         c.idContrato,
         f.porcentajeIva,
-
-        -- Solo mostrar al cliente con rol relevante según el tipo de contrato
         ISNULL(
             (
                 SELECT TOP 1
@@ -198,23 +233,23 @@ BEGIN
             ),
             'No asignado'
         ) AS clientePrincipal,
-
         f.montoPagado
     FROM Factura f
-    INNER JOIN Contrato      c  ON c.idContrato   = f.idContrato
-    INNER JOIN Propiedad     p  ON p.idPropiedad  = c.idPropiedad
-    INNER JOIN TipoContrato  tc ON tc.idTipoContrato = c.idTipoContrato
-    INNER JOIN Agente        a  ON a.identificacion = f.idAgente
+    INNER JOIN Contrato c ON c.idContrato = f.idContrato
+    INNER JOIN Propiedad p ON p.idPropiedad = c.idPropiedad
+    INNER JOIN TipoContrato tc ON tc.idTipoContrato = c.idTipoContrato
+    INNER JOIN Agente a ON a.identificacion = f.idAgente
     ORDER BY f.idFactura DESC;
 END;
 GO
+
 
 
 --SP READ
 USE AltosDelValle;
 GO
 
-CREATE OR ALTER PROCEDURE sp_getFacturasFiltradas
+CREATE OR ALTER PROCEDURE dbo.sp_getFacturasFiltradas
     @estadoPago BIT = NULL,         
     @idContrato INT = NULL,
     @idCliente BIGINT = NULL,
@@ -227,6 +262,7 @@ BEGIN
         f.idFactura,
         tc.nombre AS tipoContrato,
         p.idPropiedad,
+        p.ubicacion,
         CONCAT(a.nombre, ' ', a.apellido1) AS nombreAgente,
         f.porcentajeComision,
         CONVERT(varchar(10), f.fechaEmision, 23) AS fechaEmision,
@@ -234,37 +270,34 @@ BEGIN
         f.estadoPago,
         c.idContrato,
         f.porcentajeIva,
-
-        --Solo muestra el cliente que compra/alquila.
         ISNULL(
             (
                 SELECT TOP 1
                     CONCAT(
-                        cl2.identificacion, ' - ', cl2.nombre, ' ', cl2.apellido1,
-                        ' (', ISNULL(tr2.nombre, 'Sin rol'), ')'
+                        cl.identificacion, ' - ', cl.nombre, ' ', cl.apellido1,
+                        ' (', ISNULL(tr.nombre, 'Sin rol'), ')'
                     )
                 FROM FacturaCliente fc2
-                INNER JOIN Cliente cl2 ON cl2.identificacion = fc2.identificacion
-                INNER JOIN ClienteContrato cc2 ON cc2.idContrato = c.idContrato
-                                              AND cc2.identificacion = cl2.identificacion
-                INNER JOIN TipoRol tr2 ON tr2.idRol = cc2.idRol
+                INNER JOIN Cliente cl ON cl.identificacion = fc2.identificacion
+                INNER JOIN ClienteContrato cc ON cc.idContrato = c.idContrato
+                                              AND cc.identificacion = cl.identificacion
+                INNER JOIN TipoRol tr ON tr.idRol = cc.idRol
                 WHERE fc2.idFactura = f.idFactura
                   AND (
-                        (tc.nombre = 'Venta' AND tr2.nombre = 'Comprador')
-                     OR (tc.nombre = 'Alquiler' AND tr2.nombre = 'Inquilino')
+                        (tc.nombre = 'Venta' AND tr.nombre = 'Comprador')
+                     OR (tc.nombre = 'Alquiler' AND tr.nombre = 'Inquilino')
                   )
             ),
             'No asignado'
         ) AS cliente,
-
         f.montoPagado
     FROM Factura f
-    INNER JOIN Contrato      c  ON f.idContrato   = c.idContrato
-    INNER JOIN Propiedad     p  ON p.idPropiedad  = c.idPropiedad
-    INNER JOIN TipoContrato  tc ON tc.idTipoContrato = c.idTipoContrato
-    INNER JOIN Agente        a  ON a.identificacion = f.idAgente
-    INNER JOIN FacturaCliente fc ON fc.idFactura = f.idFactura
-    INNER JOIN Cliente cl ON fc.identificacion = cl.identificacion
+    INNER JOIN Contrato c ON f.idContrato = c.idContrato
+    INNER JOIN Propiedad p ON p.idPropiedad = c.idPropiedad
+    INNER JOIN TipoContrato tc ON tc.idTipoContrato = c.idTipoContrato
+    INNER JOIN Agente a ON a.identificacion = f.idAgente
+    LEFT JOIN FacturaCliente fc ON fc.idFactura = f.idFactura
+    LEFT JOIN Cliente cl ON fc.identificacion = cl.identificacion
     LEFT JOIN ClienteContrato cc ON cc.idContrato = c.idContrato AND cc.identificacion = cl.identificacion
     LEFT JOIN TipoRol tr ON tr.idRol = cc.idRol
     WHERE
@@ -282,7 +315,7 @@ BEGIN
             )
         )
     GROUP BY 
-        f.idFactura, tc.nombre, p.idPropiedad, a.nombre, a.apellido1,
+        f.idFactura, tc.nombre, p.idPropiedad, p.ubicacion, a.nombre, a.apellido1,
         f.porcentajeComision, f.fechaEmision, f.fechaPago,
         f.estadoPago, c.idContrato, f.montoPagado, f.porcentajeIva
     ORDER BY f.idFactura DESC;
@@ -292,15 +325,18 @@ GO
 
 
 
+
+
 -- SP_UPDATEESTADO
 USE AltosDelValle;
 GO
 
-CREATE OR ALTER PROCEDURE sp_updateFacturaEstado
+CREATE OR ALTER PROCEDURE dbo.sp_updateFacturaEstado
   @idFactura INT
 AS
 BEGIN
   SET NOCOUNT ON;
+
   BEGIN TRY
     BEGIN TRANSACTION;
 
@@ -308,39 +344,46 @@ BEGIN
       @idContrato INT,
       @idAgente INT,
       @idTipoContrato INT,
-      @deposito DECIMAL(18,2),
+      @idPropiedad INT,
       @montoFactura DECIMAL(18,2),
       @montoTotalContrato DECIMAL(18,2),
       @porcentajeComision DECIMAL(5,2),
       @montoComision DECIMAL(18,2),
       @facturasPagadas INT,
-      @fechaPagoActual DATETIME;
+      @fechaPagoActual DATETIME,
+      @totalPagado DECIMAL(18,2),
+      @idEstadoVendida INT,
+      @idEstadoDisponible INT;
 
-    -- Obtener datos base de la factura
+    /* ===== Obtener IDs de estado de propiedad ===== */
+    SELECT @idEstadoVendida = idEstadoPropiedad FROM EstadoPropiedad WHERE nombre = 'Vendida';
+    SELECT @idEstadoDisponible = idEstadoPropiedad FROM EstadoPropiedad WHERE nombre = 'Disponible';
+
+    IF @idEstadoVendida IS NULL OR @idEstadoDisponible IS NULL
+      THROW 50008, 'No se encontraron los estados de propiedad requeridos (Vendida / Disponible).', 1;
+
+    /* ===== Datos de la factura ===== */
     SELECT 
-      @idContrato = idContrato,
-      @idAgente = idAgente,
-      @montoFactura = montoPagado,
-      @porcentajeComision = porcentajeComision
-    FROM Factura 
-    WHERE idFactura = @idFactura;
+      @idContrato = f.idContrato,
+      @idAgente = f.idAgente,
+      @montoFactura = CAST(f.montoPagado AS DECIMAL(18,2)),
+      @porcentajeComision = f.porcentajeComision
+    FROM Factura f
+    WHERE f.idFactura = @idFactura;
 
     IF @idContrato IS NULL
       THROW 50010, 'La factura no existe o no tiene contrato asociado.', 1;
 
-    -- Datos del contrato
-    SELECT 
-      @idTipoContrato = idTipoContrato,
-      @deposito = deposito,
-      @montoTotalContrato = montoTotal
-    FROM Contrato 
-    WHERE idContrato = @idContrato;
-
-    -- Validar si ya fue pagada
     IF EXISTS (SELECT 1 FROM Factura WHERE idFactura = @idFactura AND estadoPago = 1)
       THROW 50011, 'Esta factura ya fue pagada.', 1;
 
-    -- Actualizar estado de la factura
+    SELECT 
+      @idTipoContrato = c.idTipoContrato,
+      @montoTotalContrato = CAST(c.montoTotal AS DECIMAL(18,2)),
+      @idPropiedad = c.idPropiedad
+    FROM Contrato c
+    WHERE c.idContrato = @idContrato;
+
     SET @fechaPagoActual = GETDATE();
 
     UPDATE Factura
@@ -348,81 +391,72 @@ BEGIN
         fechaPago = @fechaPagoActual
     WHERE idFactura = @idFactura;
 
-    UPDATE Contrato
-    SET fechaPago = @fechaPagoActual
-    WHERE idContrato = @idContrato;
+    SET @montoComision = ROUND(@montoFactura * (@porcentajeComision / 100.0), 2);
 
-    -- Contar facturas pagadas de ese contrato
-    SELECT @facturasPagadas = COUNT(*) 
-    FROM Factura 
+    INSERT INTO Comision (idAgente, idFactura, idContrato, montoComision, porcentajeComision)
+    VALUES (@idAgente, @idFactura, @idContrato, @montoComision, @porcentajeComision);
+
+    UPDATE Agente
+    SET comisionAcumulada = comisionAcumulada + @montoComision
+    WHERE identificacion = @idAgente;
+
+    SELECT @facturasPagadas = COUNT(*)
+    FROM Factura
     WHERE idContrato = @idContrato AND estadoPago = 1;
 
-    -- Lógica para tipos de contrato
-    IF @idTipoContrato = 1  
+    IF @idTipoContrato = 1  -- VENTA
     BEGIN
-        SET @montoComision = ROUND(@montoFactura * (@porcentajeComision / 100.0), 2);
+      UPDATE Contrato
+      SET estado = 'Finalizado', fechaPago = @fechaPagoActual
+      WHERE idContrato = @idContrato;
 
-        INSERT INTO Comision (idAgente, idFactura, idContrato, montoComision, porcentajeComision)
-        VALUES (@idAgente, @idFactura, @idContrato, @montoComision, @porcentajeComision);
-
-        UPDATE Agente
-        SET comisionAcumulada = comisionAcumulada + @montoComision
-        WHERE identificacion = @idAgente;
-
-        UPDATE Contrato 
-        SET estado = 'Finalizado'
-        WHERE idContrato = @idContrato;
+      UPDATE Propiedad
+      SET idEstado = @idEstadoVendida
+      WHERE idPropiedad = @idPropiedad;
     END
-    ELSE 
+    ELSE  -- ALQUILER
     BEGIN
-        IF @facturasPagadas = 1
-        BEGIN
-            UPDATE Contrato 
-            SET estado = 'Activo'
-            WHERE idContrato = @idContrato;
+      IF @facturasPagadas = 1
+      BEGIN
+        UPDATE Contrato
+        SET estado = 'Activo'
+        WHERE idContrato = @idContrato;
+      END
 
-            SET @montoComision = ROUND(@montoFactura * (@porcentajeComision / 100.0), 2);
+      SELECT @totalPagado = ISNULL(SUM(CAST(montoPagado AS DECIMAL(18,2))), 0)
+      FROM Factura
+      WHERE idContrato = @idContrato AND estadoPago = 1;
 
-            INSERT INTO Comision (idAgente, idFactura, idContrato, montoComision, porcentajeComision)
-            VALUES (@idAgente, @idFactura, @idContrato, @montoComision, @porcentajeComision);
+      IF @totalPagado >= @montoTotalContrato
+      BEGIN
+        UPDATE Contrato
+        SET estado = 'Finalizado', fechaPago = @fechaPagoActual
+        WHERE idContrato = @idContrato;
 
-            UPDATE Agente
-            SET comisionAcumulada = comisionAcumulada + @montoComision
-            WHERE identificacion = @idAgente;
-        END
-
-        DECLARE @totalPagado DECIMAL(18,2);
-        SELECT @totalPagado = ISNULL(SUM(montoPagado), 0)
-        FROM Factura 
-        WHERE idContrato = @idContrato AND estadoPago = 1;
-
-        IF @deposito IS NULL OR @deposito = 0
-        BEGIN
-           IF @totalPagado >= @montoTotalContrato
-               UPDATE Contrato SET estado = 'Finalizado' WHERE idContrato = @idContrato;
-        END
-        ELSE
-        BEGIN
-           UPDATE Contrato SET estado = 'Activo' WHERE idContrato = @idContrato;
-        END
+        UPDATE Propiedad
+        SET idEstado = @idEstadoDisponible
+        WHERE idPropiedad = @idPropiedad;
+      END
     END
 
     COMMIT TRANSACTION;
 
-    -- Retorno final
     SELECT 
-        f.idFactura,
-        f.idContrato,
-        f.idAgente,
-        f.montoPagado,
-        f.fechaEmision,
-        f.fechaPago,
-        f.estadoPago,
-        c.estado AS estadoContrato,
-        c.fechaPago AS fechaPagoContrato,  
-        'Factura actualizada correctamente' AS mensaje
+      f.idFactura,
+      f.idContrato,
+      f.idAgente,
+      f.montoPagado,
+      f.fechaEmision,
+      f.fechaPago,
+      f.estadoPago,
+      c.estado AS estadoContrato,
+      c.fechaPago AS fechaPagoContrato,
+      ep.nombre AS estadoPropiedad,
+      'Factura actualizada correctamente' AS mensaje
     FROM Factura f
     INNER JOIN Contrato c ON f.idContrato = c.idContrato
+    INNER JOIN Propiedad p ON p.idPropiedad = c.idPropiedad
+    INNER JOIN EstadoPropiedad ep ON p.idEstado = ep.idEstadoPropiedad
     WHERE f.idFactura = @idFactura;
 
   END TRY
@@ -430,7 +464,7 @@ BEGIN
     IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
     DECLARE @msg NVARCHAR(4000) = ERROR_MESSAGE();
     THROW 50099, @msg, 1;
-  END CATCH;
+  END CATCH
 END;
 GO
 
@@ -535,7 +569,7 @@ BEGIN
         SELECT cc.identificacion FROM ClienteContrato cc WHERE cc.idContrato = @idContrato
       )
     )
-      THROW 50011, 'Uno o más clientes no pertenecen al contrato asociado a la factura.', 1;
+      THROW 50011, 'Uno o m s clientes no pertenecen al contrato asociado a la factura.', 1;
 
 
     -- Validar que los clientes no hayan sido agregados ya a esa factura.
@@ -545,7 +579,7 @@ BEGIN
         INNER JOIN FacturaCliente fc
         ON fc.idFactura = d.idFactura AND fc.identificacion = d.identificacion
     )
-    THROW 50017, 'Uno o más clientes ya están asociados a esta factura', 1;
+    THROW 50017, 'Uno o m s clientes ya est n asociados a esta factura', 1;
 
     -- Insertar en FacturaCliente
     INSERT INTO FacturaCliente (identificacion, idFactura)
