@@ -2,15 +2,12 @@ USE master;
 GO
 
 DECLARE 
-    @DBName SYSNAME = N'AltosDelValle',
-    @fecha VARCHAR(8) = CONVERT(VARCHAR(8), GETDATE(), 112),
-    @hora VARCHAR(6) = REPLACE(CONVERT(VARCHAR(8), GETDATE(), 108), ':', ''),
-    @path NVARCHAR(4000);
+    @DBName SYSNAME = N'AltosDelValle', -- elegir la base de datos a respaldar
+    @fecha VARCHAR(8) = CONVERT(VARCHAR(8), GETDATE(), 112), -- la fecha en formato YYYYMMDD
+    @hora VARCHAR(6) = REPLACE(CONVERT(VARCHAR(8), GETDATE(), 108), ':', ''), -- la hora en formato HHMMSS
+    @path NVARCHAR(4000); -- ruta completa del archivo de respaldo
 
-SET @path = N'/var/opt/mssql/data/AltosDelValle_Backups/' + @DBName + '_' + @fecha + '_' + @hora + '.bak';
-
-PRINT '📦 Iniciando respaldo completo de la base: ' + @DBName;
-PRINT 'Ruta destino: ' + @path;
+SET @path = N'/var/opt/mssql/data/AltosDelValle_Backups/' + @DBName + '_' + @fecha + '_' + @hora + '.bak'; -- construir la ruta completa
 
 BACKUP DATABASE @DBName
 TO DISK = @path
@@ -21,22 +18,4 @@ WITH
     CHECKSUM,               -- Verifica integridad
     COPY_ONLY,              -- No interfiere con backups diferenciales
     STATS = 10;
-
-
-
-RESTORE VERIFYONLY 
-FROM DISK = N'/var/opt/mssql/data/AltosDelValle_Backups/AltosDelValle_20251101_180837.bak'
-WITH CHECKSUM;
-
-
-USE master;
 GO
-
-RESTORE DATABASE AltosDelValle
-FROM DISK = N'/var/opt/mssql/data/AltosDelValle_Backups/AltosDelValle_20251101_180837.bak'
-WITH 
-    REPLACE,   
-    RECOVERY,   
-    STATS = 10; 
-GO
-
