@@ -17,7 +17,7 @@ ON PRIMARY (
 )
 LOG ON (
     NAME = 'AltosDelValle_Log',
-    FILENAME = 'C:\SQLLog\AltosDelValle_Log.ldf',
+    FILENAME = 'C:\SQLData\AltosDelValle_Log.ldf',
     SIZE = 128MB,
     MAXSIZE = 2048MB,
     FILEGROWTH = 64MB
