@@ -69,7 +69,33 @@ BEGIN
 END
 GO
 
+-- sp para ver las propiedad de un cliente
+USE AltosDelValle
+GO
 
+CREATE OR ALTER PROCEDURE sp_clienteVerPropiedades
+  @identificacion INT
+AS
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM Propiedad p
+    WHERE p.identificacion = @identificacion
+  )
+  BEGIN
+    RAISERROR('El cliente no tiene propiedades asociadas.', 16, 1);
+    RETURN;
+  END
+
+  SELECT p.*
+  FROM Propiedad p
+  WHERE p.identificacion = @identificacion;
+END
+GO
+
+EXECUTE sp_clienteVerPropiedades
+  @identificacion = 7;
+GO
 -- SP_DELETE
 -- este sp solo desactiva el cliente (estado = 0)
 CREATE OR ALTER PROCEDURE sp_clienteDesactivar
