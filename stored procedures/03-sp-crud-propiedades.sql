@@ -155,7 +155,6 @@ begin
 	end catch
 end
 go
-
 -- SP_UPDATEESTADO
 USE AltosDelValle
 GO
@@ -220,5 +219,4 @@ end
 go
 
 -- final
-
 

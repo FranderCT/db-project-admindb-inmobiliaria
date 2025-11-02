@@ -1,10 +1,6 @@
 -- SP_INSERT 
 USE AltosDelValle;
 GO
-
-USE AltosDelValle_Testing
-GO
-
 CREATE OR ALTER PROCEDURE dbo.sp_insertCliente
     @identificacion INT,
     @nombre         VARCHAR(30),
@@ -93,9 +89,6 @@ BEGIN
 END
 GO
 
-EXECUTE sp_clienteVerPropiedades
-  @identificacion = 7;
-GO
 -- SP_DELETE
 -- este sp solo desactiva el cliente (estado = 0)
 CREATE OR ALTER PROCEDURE sp_clienteDesactivar

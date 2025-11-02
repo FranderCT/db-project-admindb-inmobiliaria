@@ -13,4 +13,5 @@ insert into Usuario (nombre, apellido1, email, password, telefono, idrolusuario)
 go
 -- admin@altosdelvalle.com
 -- password123
+
 select * from usuario

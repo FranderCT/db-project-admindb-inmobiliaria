@@ -385,6 +385,3 @@ begin
   END CATCH
 end
 go
-
-select * from Agente
-go
