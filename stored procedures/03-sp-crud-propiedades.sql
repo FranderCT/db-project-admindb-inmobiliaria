@@ -60,101 +60,78 @@ end
 go
 
 -- SP_UPDATE
-USE AltosDelValle
+USE AltosDelValle;
 GO
-create or alter procedure sp_updatePropiedad
-  @_idPropiedad      int,
-  @_ubicacion        varchar(100),
-  @_precio           money,
-  @_idEstado         int,
-  @_idTipoInmueble   int,
-  @_identificacion   int
-as
-begin
-  begin try
-    begin transaction
 
-      declare @existePropiedad int;
-      declare @existeEstado int;
-      declare @existeTipo int;
-      declare @existeCliente int;
+CREATE OR ALTER PROCEDURE sp_updatePropiedad
+  @_idPropiedad      INT,
+  @_ubicacion        VARCHAR(100) = NULL,
+  @_precio           MONEY = NULL,
+  @_idEstado         INT = NULL,
+  @_idTipoInmueble   INT = NULL,
+  @_identificacion   INT = NULL
+AS
+BEGIN
+  BEGIN TRY
+    BEGIN TRANSACTION;
 
-      select @existePropiedad = idPropiedad
-		  from Propiedad
-		  where idPropiedad = @_idPropiedad;
+    -- Verifica si la propiedad existe
+    IF NOT EXISTS (SELECT 1 FROM Propiedad WHERE idPropiedad = @_idPropiedad)
+    BEGIN
+      PRINT ' La propiedad no existe.';
+      ROLLBACK TRANSACTION;
+      RETURN;
+    END
 
-      if @existePropiedad is null
-      begin
-        print 'La propiedad no existe.';
-        rollback transaction;
-		return;
-      end
+    -- Validaciones de parámetros solo si son proporcionados
+    IF @_precio IS NOT NULL AND @_precio <= 0
+    BEGIN
+      PRINT ' El precio debe ser mayor a 0.';
+      ROLLBACK TRANSACTION;
+      RETURN;
+    END
 
-      if @_ubicacion is null or LTRIM(RTRIM(@_ubicacion)) = ''
-      begin
-        print 'La ubicaci�n es obligatoria.';
-        rollback transaction; 
-		return;
-      end
+    IF @_idEstado IS NOT NULL AND NOT EXISTS (SELECT 1 FROM EstadoPropiedad WHERE idEstadoPropiedad = @_idEstado)
+    BEGIN
+      PRINT ' Ese estado no existe.';
+      ROLLBACK TRANSACTION;
+      RETURN;
+    END
 
-      if @_precio is null or @_precio <= 0
-      begin
-        print 'El precio debe ser mayor a 0.';
-        rollback transaction; 
-		return;
-      end
+    IF @_idTipoInmueble IS NOT NULL AND NOT EXISTS (SELECT 1 FROM TipoInmueble WHERE idTipoInmueble = @_idTipoInmueble)
+    BEGIN
+      PRINT ' Ese tipo de inmueble no existe.';
+      ROLLBACK TRANSACTION;
+      RETURN;
+    END
 
-      select @existeEstado = idEstadoPropiedad
-		  from EstadoPropiedad
-		  where idEstadoPropiedad = @_idEstado;
+    IF @_identificacion IS NOT NULL AND NOT EXISTS (SELECT 1 FROM Cliente WHERE identificacion = @_identificacion)
+    BEGIN
+      PRINT ' No existe un cliente con esa identificación.';
+      ROLLBACK TRANSACTION;
+      RETURN;
+    END
 
-      if @existeEstado is null
-      begin
-        print 'Ese estado no existe.';
-        rollback transaction; 
-		return;
-      end
+    -- Actualiza solo los campos enviados, manteniendo los valores actuales si no se envían
+    UPDATE Propiedad
+    SET 
+        ubicacion = CASE WHEN @_ubicacion IS NOT NULL THEN @_ubicacion ELSE ubicacion END,
+        precio = CASE WHEN @_precio IS NOT NULL THEN @_precio ELSE precio END,
+        idEstado = CASE WHEN @_idEstado IS NOT NULL THEN @_idEstado ELSE idEstado END,
+        idTipoInmueble = CASE WHEN @_idTipoInmueble IS NOT NULL THEN @_idTipoInmueble ELSE idTipoInmueble END,
+        identificacion = CASE WHEN @_identificacion IS NOT NULL THEN @_identificacion ELSE identificacion END
+    WHERE idPropiedad = @_idPropiedad;
 
-      select @existeTipo = idTipoInmueble
-		  from TipoInmueble
-		  where idTipoInmueble = @_idTipoInmueble;
+    COMMIT TRANSACTION;
+    PRINT 'Propiedad actualizada correctamente.';
+  END TRY
+  BEGIN CATCH
+    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
+    PRINT 'Error: ' + ERROR_MESSAGE();
+  END CATCH
+END
+GO
 
-      if @existeTipo is null
-      begin
-        print 'Ese tipo de inmueble no existe.';
-        rollback transaction; 
-		return;
-      end
-
-      select @existeCliente = identificacion
-		  from Cliente
-		  where identificacion = @_identificacion;
-
-      if @existeCliente is null
-      begin
-        print 'No existe un cliente con esa identificaci�n.';
-        rollback transaction; 
-		return;
-      end
-
-      -- Actualizar
-      UPDATE Propiedad
-      set ubicacion = @_ubicacion,
-          precio = @_precio,
-          idEstado = @_idEstado,
-          idTipoInmueble = @_idTipoInmueble,
-          identificacion = @_identificacion
-      where idPropiedad = @_idPropiedad;
-
-    commit transaction
-		print 'Propiedad actualizada correctamente.';
-	end try
-	begin catch
-		IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
-		PRINT 'Error: ' + ERROR_MESSAGE();
-	end catch
-end
-go
 -- SP_UPDATEESTADO
 USE AltosDelValle
 GO
