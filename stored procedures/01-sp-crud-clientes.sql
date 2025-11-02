@@ -2,51 +2,57 @@
 USE AltosDelValle;
 GO
 
+USE AltosDelValle_Testing
+GO
+
 CREATE OR ALTER PROCEDURE dbo.sp_insertCliente
-  @identificacion INT,
-  @nombre         VARCHAR(30),
-  @apellido1      VARCHAR(30),
-  @apellido2      VARCHAR(30) = NULL,
-  @telefono       VARCHAR(30)
+    @identificacion INT,
+    @nombre         VARCHAR(30),
+    @apellido1      VARCHAR(30),
+    @apellido2      VARCHAR(30) = NULL,
+    @telefono       VARCHAR(30)
 AS
 BEGIN
-  SET NOCOUNT ON;
+    SET NOCOUNT ON;
 
-  BEGIN TRY
-    IF EXISTS (SELECT 1 FROM dbo.Cliente WHERE identificacion = @identificacion)
-      THROW 50010, 'La identificación ya está registrada.', 1;
-      
-    IF @identificacion IS NULL OR @identificacion <= 0
-      THROW 50011, 'La identificación es obligatoria y debe ser > 0.', 1;
+    BEGIN TRY
+        IF EXISTS (SELECT 1 FROM dbo.Cliente WHERE identificacion = @identificacion)
+        THROW 50010, 'La identificación ya está registrada.', 1;
+        
+        IF @identificacion IS NULL OR @identificacion <= 0
+        THROW 50011, 'La identificación es obligatoria y debe ser > 0.', 1;
 
-    IF @nombre IS NULL OR LTRIM(RTRIM(@nombre)) = ''
-      THROW 50012, 'El nombre es obligatorio.', 1;
+        IF @nombre IS NULL OR LTRIM(RTRIM(@nombre)) = ''
+        THROW 50012, 'El nombre es obligatorio.', 1;
 
-    IF @apellido1 IS NULL OR LTRIM(RTRIM(@apellido1)) = ''
-      THROW 50013, 'El primer apellido es obligatorio.', 1;
+        IF @apellido1 IS NULL OR LTRIM(RTRIM(@apellido1)) = ''
+        THROW 50013, 'El primer apellido es obligatorio.', 1;
 
-    IF @telefono IS NULL OR LTRIM(RTRIM(@telefono)) = ''
-      THROW 50014, 'El teléfono es obligatorio.', 1;
+        IF @telefono IS NULL OR LTRIM(RTRIM(@telefono)) = ''
+        THROW 50014, 'El teléfono es obligatorio.', 1;
 
-    INSERT INTO dbo.Cliente (identificacion, nombre, apellido1, apellido2, telefono)
-    VALUES (@identificacion, @nombre, @apellido1, @apellido2, @telefono);
+        IF EXISTS (SELECT 1 FROM dbo.Cliente WHERE telefono = @telefono)
+        THROW 50015, 'El teléfono ya está registrado.', 1;
 
-    SELECT identificacion, nombre, apellido1, apellido2, telefono, estado
-    FROM dbo.Cliente
-    WHERE identificacion = @identificacion;
-  END TRY
-  BEGIN CATCH
-    DECLARE @num INT = ERROR_NUMBER(),
-            @msg NVARCHAR(4000) = ERROR_MESSAGE();
+        INSERT INTO dbo.Cliente (identificacion, nombre, apellido1, apellido2, telefono)
+        VALUES (@identificacion, @nombre, @apellido1, @apellido2, @telefono);
 
-    -- Si es un error de nuestros códigos 50010..50099, relanzamos igual.
-    IF @num BETWEEN 50010 AND 50099
-      THROW @num, @msg, 1;
+        SELECT identificacion, nombre, apellido1, apellido2, telefono, estado
+        FROM dbo.Cliente
+        WHERE identificacion = @identificacion;
+    END TRY
+    BEGIN CATCH
+        DECLARE @num INT = ERROR_NUMBER(),
+                @msg NVARCHAR(4000) = ERROR_MESSAGE();
 
-    -- Si es otro error (FK, CHECK, etc.), lo envolvemos en un mensaje genérico
-    DECLARE @fullMsg NVARCHAR(4000) = N'Error al insertar cliente: ' + @msg;
-    THROW 50050, @fullMsg, 1;
-  END CATCH
+        
+        IF @num BETWEEN 50010 AND 50099
+        THROW @num, @msg, 1;
+
+        
+        DECLARE @fullMsg NVARCHAR(4000) = N'Error al insertar cliente: ' + @msg;
+        THROW 50050, @fullMsg, 1;
+    END CATCH
 END
 GO
 
@@ -104,6 +110,9 @@ BEGIN
 
   IF NOT EXISTS (SELECT 1 FROM dbo.Cliente WHERE identificacion = @identificacion)
       THROW 50030, 'Cliente no encontrado.', 1;
+
+  IF EXISTS (SELECT 1 FROM dbo.Cliente WHERE telefono = @telefono AND identificacion <> @identificacion)
+      THROW 50040, 'El teléfono ya está registrado por otro cliente.', 1;
 
   -- Actualizar los campos que no son nulos
   UPDATE dbo.Cliente
