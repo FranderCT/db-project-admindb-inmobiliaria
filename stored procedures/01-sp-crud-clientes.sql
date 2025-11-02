@@ -321,3 +321,5 @@ INSERT INTO TipoRol (nombre) VALUES
   ('Comprador'),
   ('Vendedor');
 GO
+
+
