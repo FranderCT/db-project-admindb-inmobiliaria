@@ -1,6 +1,8 @@
 -- SP_INSERT 
 USE AltosDelValle;
 GO
+
+
 CREATE OR ALTER PROCEDURE dbo.sp_insertCliente
     @identificacion INT,
     @nombre         VARCHAR(30),
@@ -88,6 +90,7 @@ BEGIN
   WHERE p.identificacion = @identificacion;
 END
 GO
+
 
 -- SP_DELETE
 -- este sp solo desactiva el cliente (estado = 0)

@@ -704,24 +704,14 @@ BEGIN
 
   SELECT 
     c.idContrato,
-    tc.nombre AS tipoContrato,
-    p.idPropiedad,
-    p.ubicacion AS propiedadUbicacion,
-    CONCAT(cli.nombre, ' ', cli.apellido1, ' ', cli.apellido2) AS nombreCliente,
-    c.estado AS estadoContrato,
-    c.cantidadPagos,
-    (SELECT COUNT(*) FROM Factura f WHERE f.idContrato = c.idContrato) AS facturasEmitidas
+    tc.nombre AS tipoContrato
   FROM Contrato c
   INNER JOIN TipoContrato tc ON c.idTipoContrato = tc.idTipoContrato
-  INNER JOIN Propiedad p ON c.idPropiedad = p.idPropiedad
   INNER JOIN ClienteContrato cc ON c.idContrato = cc.idContrato
   INNER JOIN Cliente cli ON cli.identificacion = cc.identificacion
   INNER JOIN TipoRol tr ON cc.idRol = tr.idRol
   WHERE 
-    (
-      -- Solo clientes que son compradores o inquilinos
-      LOWER(tr.nombre) IN ('comprador', 'inquilino')
-    )
+    LOWER(tr.nombre) IN ('comprador', 'inquilino')
     AND (
       -- Contratos de venta: aún sin factura
       (LOWER(tc.nombre) = 'venta' AND NOT EXISTS (
@@ -734,4 +724,3 @@ BEGIN
     );
 END;
 GO
-

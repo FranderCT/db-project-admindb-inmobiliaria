@@ -10,7 +10,8 @@ create or alter procedure sp_insertPropiedad
 	@precio         money,
 	@idEstado       int,
 	@idTipoInmueble int,
-	@identificacion int
+	@identificacion int,
+	@imagenUrl NVARCHAR(500)=NULL
 as
 begin
   set nocount on;
@@ -50,9 +51,17 @@ begin
     return;
   end
 
+  SELECT 
+    @ubicacion AS ubicacion,
+    @precio AS precio,
+    @idEstado AS idEstado,
+    @idTipoInmueble AS idTipoInmueble,
+    @identificacion AS identificacion,
+    @imagenUrl AS imagenUrl;
+
   -- insertamos la propiedad
-  insert into Propiedad (ubicacion, precio, idEstado, idTipoInmueble, identificacion)
-  values (@ubicacion, @precio, @idEstado, @idTipoInmueble, @identificacion);
+  insert into Propiedad (ubicacion, precio, idEstado, idTipoInmueble, identificacion,imagenUrl)
+  values (@ubicacion, @precio, @idEstado, @idTipoInmueble, @identificacion, @imagenUrl);
   print 'Propiedad insertada correctamente.';
   select * from Propiedad where idPropiedad = SCOPE_IDENTITY();
 
