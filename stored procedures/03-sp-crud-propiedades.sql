@@ -11,8 +11,12 @@ create or alter procedure sp_insertPropiedad
 	@idEstado       int,
 	@idTipoInmueble int,
 	@identificacion int,
-	@imagenUrl NVARCHAR(500)=NULL
-as
+	@imagenUrl NVARCHAR(500)=NULL,
+	@cantHabitaciones int,
+  @cantBannios int,
+  @areaM2 FLOAT,
+  @amueblado bit
+AS
 begin
   set nocount on;
 
@@ -57,11 +61,15 @@ begin
     @idEstado AS idEstado,
     @idTipoInmueble AS idTipoInmueble,
     @identificacion AS identificacion,
-    @imagenUrl AS imagenUrl;
+    @imagenUrl AS imagenUrl,
+    @cantBannios AS cantBannios,
+    @areaM2 AS areaM2,
+    @amueblado AS amueblado,
+    @cantHabitaciones AS cantHabitaciones;
 
   -- insertamos la propiedad
-  insert into Propiedad (ubicacion, precio, idEstado, idTipoInmueble, identificacion,imagenUrl)
-  values (@ubicacion, @precio, @idEstado, @idTipoInmueble, @identificacion, @imagenUrl);
+  insert into Propiedad (ubicacion, precio, idEstado, idTipoInmueble, identificacion, imagenUrl, cantBannios, areaM2, amueblado, cantHabitaciones)
+  values (@ubicacion, @precio, @idEstado, @idTipoInmueble, @identificacion, @imagenUrl, @cantBannios, @areaM2, @amueblado, @cantHabitaciones);
   print 'Propiedad insertada correctamente.';
   select * from Propiedad where idPropiedad = SCOPE_IDENTITY();
 
@@ -69,8 +77,6 @@ end
 go
 
 -- SP_UPDATE
-USE AltosDelValle;
-GO
 
 CREATE OR ALTER PROCEDURE sp_updatePropiedad
   @_idPropiedad      INT,
