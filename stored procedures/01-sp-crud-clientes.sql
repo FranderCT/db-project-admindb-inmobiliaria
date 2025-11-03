@@ -2,8 +2,6 @@
 USE AltosDelValle;
 GO
 
-USE AltosDelValle_Testing
-GO
 
 CREATE OR ALTER PROCEDURE dbo.sp_insertCliente
     @identificacion INT,
