@@ -13,6 +13,29 @@ CREATE TABLE Propiedad (
 ) ON Propiedades;
 GO
 
+-- nuevas columnaaaas
+use AltosDelValle;
+GO
+
+alter TABLE Propiedad
+ADD cantHabitaciones int NOT NULL DEFAULT 0;
+GO
+
+alter TABLE Propiedad
+ADD cantBannios int NOT NULL DEFAULT 0;
+go
+
+alter TABLE Propiedad
+add areaM2 FLOAT NOT NULL DEFAULT 0;
+GO
+
+alter TABLE Propiedad
+ADD amueblado bit NOT NULL DEFAULT 0;
+GO
+-- nuevas columnaaaas
+
+alter table Propiedad
+DROP COLUMN cantiHabitaciones;
 -- FK + CHECKS
 ALTER TABLE Propiedad
 ADD CONSTRAINT FK_Propiedad_EstadoPropiedad 
@@ -41,3 +64,6 @@ ADD CONSTRAINT CHK_Propiedad_Precio_Pos CHECK (precio > 0);
 ALTER TABLE Propiedad
 ADD CONSTRAINT CHK_Propiedad_Ubicacion_Longitud CHECK (LEN(ubicacion) >= 5);
 GO
+
+
+select * from Propiedad;
