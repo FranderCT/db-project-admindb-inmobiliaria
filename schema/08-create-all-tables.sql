@@ -71,7 +71,8 @@ CREATE TABLE Propiedad (
     precio MONEY NOT NULL,
     idEstado INT NOT NULL,
     idTipoInmueble INT NOT NULL,
-    identificacion INT NOT NULL
+    identificacion INT NOT NULL,
+	imagenUrl NVARCHAR(500) NULL
 ) ON Propiedades;
 GO
 
