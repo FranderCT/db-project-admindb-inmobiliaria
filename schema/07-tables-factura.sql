@@ -12,7 +12,6 @@ CREATE TABLE Factura(
     iva DECIMAL(18,2) NOT NULL,
     idContrato INT NOT NULL,
     idAgente INT NOT NULL,
-    idPropiedad INT NOT NULL,
     idTipoContrato INT NULL,
     montoComision DECIMAL(18,2) NOT NULL,
     porcentajeComision DECIMAL(5,2) NOT NULL,

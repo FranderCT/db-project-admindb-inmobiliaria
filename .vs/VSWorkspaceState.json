@@ -5,10 +5,9 @@
     "\\functions",
     "\\login",
     "\\schema",
-    "\\stored procedures",
     "\\triggers",
     "\\views"
   ],
-  "SelectedNode": "\\login\\LoginClientes.sql",
+  "SelectedNode": "\\schema\\07-tables-factura.sql",
   "PreviewInSolutionExplorer": false
 }
