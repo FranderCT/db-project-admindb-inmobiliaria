@@ -213,4 +213,77 @@ go
 
 -- final
 
+-- propiedades por cliente
+create or alter procedure sp_propiedadesPorCliente
+  @identificacion INT
+AS
+BEGIN
+  SET NOCOUNT ON;
 
+  -- Validaciones
+  IF @identificacion IS NULL
+  BEGIN
+    RAISERROR('La identificacion es obligatoria.', 16, 1);
+    RETURN;
+  END
+
+  IF NOT EXISTS (SELECT 1 FROM Cliente WHERE identificacion = @identificacion)
+  BEGIN
+    RAISERROR('No existe un cliente con esa identificacion.', 16, 1);
+    RETURN;
+  END
+
+  -- Selecciona propiedades del cliente junto a datos referenciados
+  SELECT
+    p.idPropiedad,
+    p.ubicacion,
+    p.precio,
+    p.idEstado,
+    ep.nombre estadoNombre,
+    p.idTipoInmueble,
+    ti.nombre tipoInmuebleNombre,
+    p.identificacion as propietarioIdentificacion,
+    (propietario.nombre + ' ' + propietario.apellido1 + ISNULL(' ' + propietario.apellido2, '')) propietarioNombre,
+    p.imagenUrl,
+    p.cantBannios,
+    p.areaM2,
+    p.amueblado
+  FROM Propiedad p
+  LEFT JOIN EstadoPropiedad ep ON p.idEstado = ep.idEstadoPropiedad
+  LEFT JOIN TipoInmueble ti ON p.idTipoInmueble = ti.idTipoInmueble
+  LEFT JOIN Cliente propietario ON p.identificacion = propietario.identificacion
+  WHERE p.identificacion = @identificacion
+  ORDER BY p.idPropiedad;
+END
+GO
+-- final propiedades por cliente
+
+-- propiedades por id
+create or alter procedure sp_obtenerPropiedadPorId
+  @idPropiedad INT
+AS
+BEGIN
+  SET NOCOUNT ON;
+
+  SELECT
+    p.idPropiedad,
+    p.ubicacion,
+    p.precio,
+    p.idEstado,
+    ep.nombre estadoNombre,
+    p.idTipoInmueble,
+    ti.nombre tipoInmuebleNombre,
+    p.identificacion as propietarioIdentificacion,
+    (propietario.nombre + ' ' + propietario.apellido1 + ISNULL(' ' + propietario.apellido2, '')) propietarioNombre,
+    p.imagenUrl,
+    p.cantBannios,
+    p.areaM2,
+    p.amueblado
+  FROM Propiedad p
+  LEFT JOIN EstadoPropiedad ep ON p.idEstado = ep.idEstadoPropiedad
+  LEFT JOIN TipoInmueble ti ON p.idTipoInmueble = ti.idTipoInmueble
+  LEFT JOIN Cliente propietario ON p.identificacion = propietario.identificacion
+  WHERE p.idPropiedad = @idPropiedad;
+END
+GO
+-- propiedades por id 
