@@ -2,7 +2,7 @@
 use AltosDelValle
 GO
 
-CREATE PROCEDURE  dbo.sp_contrato_historial_por_cliente
+CREATE OR ALTER PROCEDURE  dbo.sp_contrato_historial_por_cliente
     @identificacion INT
 AS
 BEGIN
