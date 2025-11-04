@@ -1,6 +1,5 @@
 USE AltosDelValle
 GO
-
 --			TABLA CONTRATO
 CREATE TABLE Contrato(
 	idContrato int PRIMARY KEY,
@@ -11,10 +10,10 @@ CREATE TABLE Contrato(
 	idTipoContrato INT NOT NULL,
 	idPropiedad INT NOT NULL, 
 	idAgente INT NOT NULL,
-  montoTotal MONEY NULL,
+	montoTotal MONEY NULL,
   deposito MONEY NULL,
   porcentajeComision DECIMAL(5,2) NULL,
-  cantidadPagos INT NULL, 
+	cantidadPagos INT NULL, 
   estado NVARCHAR(30) DEFAULT 'Pendiente'
 )ON Contratos
 GO
@@ -85,7 +84,7 @@ GO
 CREATE TABLE ContratoTerminos (
     idContratoTerminos INT IDENTITY(1,1) PRIMARY KEY,
     idCondicion INT NOT NULL,
-    idContrato INT NOT NULL
+    idContrato INT NULL,
     -- Foreign keys
     CONSTRAINT FK_ContratoTerminos_TerminosCondiciones FOREIGN KEY (idCondicion) REFERENCES TerminosCondiciones(idCondicion),
     CONSTRAINT FK_ContratoTerminos_Contrato FOREIGN KEY (idContrato) REFERENCES Contrato(idContrato)
