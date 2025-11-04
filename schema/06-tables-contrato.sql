@@ -3,7 +3,7 @@ GO
 
 --			TABLA CONTRATO
 CREATE TABLE Contrato(
-	idContrato int identity (1,1)PRIMARY KEY not null,
+	idContrato int PRIMARY KEY,
 	fechaInicio DATETIME NULL, 
 	fechaFin DATETIME NULL, 
 	fechaFirma DATETIME NULL, 

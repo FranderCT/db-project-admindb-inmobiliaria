@@ -73,5 +73,5 @@ BEGIN
 END
 GO
 
-EXEC dbo.sp_contrato_historial_por_cliente @identificacion = 12345678;
+
 
