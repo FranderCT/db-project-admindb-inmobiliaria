@@ -2,7 +2,7 @@
 use AltosDelValle
 GO
 
-CREATE OR ALTER PROCEDURE  dbo.sp_contrato_historial_por_cliente
+CREATE OR ALTER PROCEDURE  dbo.sp_contratoHistorialPorCliente
     @identificacion INT
 AS
 BEGIN
@@ -72,6 +72,3 @@ BEGIN
     WHERE cc.identificacion = @identificacion;
 END
 GO
-
-
-
