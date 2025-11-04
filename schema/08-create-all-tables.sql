@@ -110,7 +110,7 @@ ADD CONSTRAINT CHK_Propiedad_Ubicacion_Longitud CHECK (LEN(ubicacion) >= 5);
 GO
 --			TABLA CONTRATO
 CREATE TABLE Contrato(
-	idContrato int identity (1,1)PRIMARY KEY not null,
+	idContrato int PRIMARY KEY,
 	fechaInicio DATETIME NULL, 
 	fechaFin DATETIME NULL, 
 	fechaFirma DATETIME NULL, 
@@ -192,7 +192,7 @@ GO
 CREATE TABLE ContratoTerminos (
     idContratoTerminos INT IDENTITY(1,1) PRIMARY KEY,
     idCondicion INT NOT NULL,
-    idContrato INT NOT NULL
+    idContrato INT NULL,
     -- Foreign keys
     CONSTRAINT FK_ContratoTerminos_TerminosCondiciones FOREIGN KEY (idCondicion) REFERENCES TerminosCondiciones(idCondicion),
     CONSTRAINT FK_ContratoTerminos_Contrato FOREIGN KEY (idContrato) REFERENCES Contrato(idContrato)

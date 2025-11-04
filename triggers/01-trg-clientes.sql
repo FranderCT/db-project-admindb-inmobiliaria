@@ -3,7 +3,9 @@
 --TRIGGER Evita desactivar clientes (UPDATE estado = 0)
     --si tienen facturas o propiedades asociadas.
     --Protege el SP sp_cliente_desactivar.
-  
+	use AltosDelValle
+	go
+
 	CREATE OR ALTER TRIGGER trg_evitarDesactivarCliente_Update
 	ON dbo.Cliente
 	FOR UPDATE
