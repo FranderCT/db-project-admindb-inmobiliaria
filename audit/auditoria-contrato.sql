@@ -1,3 +1,8 @@
+USE AltosDelValle;
+GO
+
+-- Tabla
+-- ========================================
 CREATE TABLE AuditoriaContrato (
     idAuditoriaContrato INT IDENTITY PRIMARY KEY,
     idContrato INT,
@@ -11,70 +16,80 @@ CREATE TABLE AuditoriaContrato (
     montoTotal MONEY,
     deposito MONEY,
     porcentajeComision DECIMAL(5,2),
+    cantidadPagos INT,
     estado NVARCHAR(30),
-    accion NVARCHAR(10),
-    usuario NVARCHAR(100),
+    accion NVARCHAR(10),           
+    usuario NVARCHAR(250),         
+    usuarioBD NVARCHAR(100),       
     fecha DATETIME DEFAULT GETDATE(),
     host NVARCHAR(100)
 );
 GO
 
 
+-- Trigger
+-- ========================================
 CREATE OR ALTER TRIGGER tr_auditoria_contrato
 ON Contrato
 AFTER INSERT, UPDATE, DELETE
 AS
 BEGIN
     SET NOCOUNT ON;
-
-    -- Extrae el contexto actual del usuario JWT
+    -- Obtener datos del contexto del usuario
     DECLARE 
-        @correo NVARCHAR(150) = CAST(SESSION_CONTEXT(N'correo') AS NVARCHAR(150)),
-        @nombreRol NVARCHAR(100) = CAST(SESSION_CONTEXT(N'nombreRol') AS NVARCHAR(100)),
-        @host NVARCHAR(100) = HOST_NAME();
-
-    -- Combina el usuario con su rol (ejemplo: "carrillo2@gmail.com (Rol: agente)")
-    DECLARE @usuario NVARCHAR(250) = 
+        @correo NVARCHAR(150)     = CAST(SESSION_CONTEXT(N'correo') AS NVARCHAR(150)),
+        @nombreRol NVARCHAR(100)  = CAST(SESSION_CONTEXT(N'nombreRol') AS NVARCHAR(100)),
+        @host NVARCHAR(100)       = HOST_NAME(),
+        @usuarioBD NVARCHAR(100)  = ORIGINAL_LOGIN();
+    DECLARE @usuarioToken NVARCHAR(250) = 
         CONCAT(ISNULL(@correo, 'Desconocido'), ' (Rol: ', ISNULL(@nombreRol, 'Sin rol'), ')');
-
     -- INSERT
-    IF EXISTS (SELECT * FROM inserted)
+    IF EXISTS (SELECT 1 FROM inserted) AND NOT EXISTS (SELECT 1 FROM deleted)
+    BEGIN
         INSERT INTO AuditoriaContrato (
             idContrato, fechaInicio, fechaFin, fechaFirma, fechaPago,
             idTipoContrato, idPropiedad, idAgente, montoTotal, deposito,
-            porcentajeComision, estado, accion, usuario, host
+            porcentajeComision, cantidadPagos, estado, 
+            accion, usuario, usuarioBD, host
         )
         SELECT 
             idContrato, fechaInicio, fechaFin, fechaFirma, fechaPago,
             idTipoContrato, idPropiedad, idAgente, montoTotal, deposito,
-            porcentajeComision, estado, 'INSERT', @usuario, @host
+            porcentajeComision, cantidadPagos, estado,
+            'INSERT', @usuarioToken, @usuarioBD, @host
         FROM inserted;
-
+    END
     -- UPDATE
-    IF EXISTS (SELECT * FROM inserted)
+    IF EXISTS (SELECT 1 FROM inserted) AND EXISTS (SELECT 1 FROM deleted)
+    BEGIN
         INSERT INTO AuditoriaContrato (
             idContrato, fechaInicio, fechaFin, fechaFirma, fechaPago,
             idTipoContrato, idPropiedad, idAgente, montoTotal, deposito,
-            porcentajeComision, estado, accion, usuario, host
+            porcentajeComision, cantidadPagos, estado, 
+            accion, usuario, usuarioBD, host
         )
         SELECT 
             idContrato, fechaInicio, fechaFin, fechaFirma, fechaPago,
             idTipoContrato, idPropiedad, idAgente, montoTotal, deposito,
-            porcentajeComision, estado, 'UPDATE', @usuario, @host
+            porcentajeComision, cantidadPagos, estado,
+            'UPDATE', @usuarioToken, @usuarioBD, @host
         FROM inserted;
-
+    END
     -- DELETE
-    IF EXISTS (SELECT * FROM deleted)
+    IF EXISTS (SELECT 1 FROM deleted) AND NOT EXISTS (SELECT 1 FROM inserted)
+    BEGIN
         INSERT INTO AuditoriaContrato (
             idContrato, fechaInicio, fechaFin, fechaFirma, fechaPago,
             idTipoContrato, idPropiedad, idAgente, montoTotal, deposito,
-            porcentajeComision, estado, accion, usuario, host
+            porcentajeComision, cantidadPagos, estado, 
+            accion, usuario, usuarioBD, host
         )
         SELECT 
             idContrato, fechaInicio, fechaFin, fechaFirma, fechaPago,
             idTipoContrato, idPropiedad, idAgente, montoTotal, deposito,
-            porcentajeComision, estado, 'DELETE', @usuario, @host
+            porcentajeComision, cantidadPagos, estado,
+            'DELETE', @usuarioToken, @usuarioBD, @host
         FROM deleted;
+    END
 END;
 GO
-
