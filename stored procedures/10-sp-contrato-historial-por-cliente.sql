@@ -70,7 +70,7 @@ BEGIN
         GROUP BY idContrato
     ) f ON c.idContrato = f.idContrato
     WHERE cc.identificacion = @identificacion;
-END;
+END
 GO
 
 EXEC dbo.sp_contrato_historial_por_cliente @identificacion = 12345678;
