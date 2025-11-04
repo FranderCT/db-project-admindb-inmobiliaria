@@ -19,7 +19,8 @@ BEGIN
     WHERE idPropiedad / 10000 = @anio;
 
     -- Insertar nuevas filas con id generado
-    INSERT INTO Propiedad (idPropiedad, ubicacion, precio, idEstado, idTipoInmueble, identificacion, imagenUrl)
+    -- Aseguramos valores por defecto para columnas NOT NULL para evitar errores de INSERT
+    INSERT INTO Propiedad (idPropiedad, ubicacion, precio, idEstado, idTipoInmueble, identificacion, imagenUrl, cantHabitaciones, cantBannios, areaM2, amueblado)
     SELECT 
         @prefijo + ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) + @nextNum - 1,
         ubicacion,
@@ -27,7 +28,11 @@ BEGIN
         idEstado,
         idTipoInmueble,
         identificacion,
-		imagenUrl
+        imagenUrl,
+        cantHabitaciones,
+        cantBannios,
+        areaM2,
+        amueblado
     FROM inserted;
 END;
 GO

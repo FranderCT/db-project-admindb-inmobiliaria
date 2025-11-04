@@ -66,13 +66,17 @@ GO
 
 -- PROPIEDAD
 CREATE TABLE Propiedad (
-    idPropiedad int PRIMARY KEY,  
+    idPropiedad int  PRIMARY KEY,  
     ubicacion VARCHAR(100) NOT NULL,
     precio MONEY NOT NULL,
     idEstado INT NOT NULL,
     idTipoInmueble INT NOT NULL,
     identificacion INT NOT NULL,
-	imagenUrl NVARCHAR(500) NULL
+	imagenUrl NVARCHAR(500) NULL,
+    cantBannios int NOT NULL,
+    areaM2 FLOAT NOT NULL,
+    amueblado bit NOT NULL,
+    cantHabitaciones int NOT NULL
 ) ON Propiedades;
 GO
 
