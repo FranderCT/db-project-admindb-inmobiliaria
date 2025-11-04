@@ -316,7 +316,7 @@ GO
 
 ------   sp_detalleGeneralContrato (todo el contenido de un contrato)
 CREATE OR ALTER PROCEDURE dbo.sp_detalleGeneralContrato
-  @idContrato INT
+  @idContrato INT  = NULL 
 AS
 BEGIN
   SET NOCOUNT ON;
@@ -410,8 +410,8 @@ BEGIN
       )) AS condiciones
 
     FROM dbo.Contrato c
-    INNER JOIN dbo.TipoContrato tc ON tc.idTipoContrato = c.idTipoContrato
-    WHERE c.idContrato = @idContrato
+    LEFT JOIN dbo.TipoContrato tc ON tc.idTipoContrato = c.idTipoContrato
+    WHERE (@idContrato IS NULL OR c.idContrato = @idContrato)
     FOR JSON PATH, INCLUDE_NULL_VALUES
   );
 
@@ -503,5 +503,7 @@ GO
 --TABLA TIPO CONTRATO 
 INSERT INTO TipoContrato (nombre) VALUES ('Venta'), ('Alquiler');
 GO
+
+
 
 
