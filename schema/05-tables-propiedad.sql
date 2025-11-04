@@ -9,33 +9,27 @@ CREATE TABLE Propiedad (
     idEstado INT NOT NULL,
     idTipoInmueble INT NOT NULL,
     identificacion INT NOT NULL,
-	imagenUrl NVARCHAR(500) NULL
+	imagenUrl NVARCHAR(500) NULL,
+    cantBannios int NOT NULL,
+    areaM2 FLOAT NOT NULL,
+    amueblado bit NOT NULL,
+    cantHabitaciones int NOT NULL
 ) ON Propiedades;
 GO
 
--- nuevas columnaaaas
-use AltosDelValle;
-GO
-
-alter TABLE Propiedad
-ADD cantHabitaciones int NOT NULL DEFAULT 0;
-GO
-
-alter TABLE Propiedad
-ADD cantBannios int NOT NULL DEFAULT 0;
-go
-
-alter TABLE Propiedad
-add areaM2 FLOAT NOT NULL DEFAULT 0;
-GO
-
-alter TABLE Propiedad
-ADD amueblado bit NOT NULL DEFAULT 0;
-GO
--- nuevas columnaaaas
 
 alter table Propiedad
-DROP COLUMN cantiHabitaciones;
+add CONSTRAINT CHK_Propiedad_CantHabitaciones_Valid CHECK (cantHabitaciones > 0);
+GO
+
+alter table Propiedad
+add CONSTRAINT CHK_Propiedad_CantBannios_Valid CHECK (cantBannios > 0);
+GO
+
+alter table Propiedad
+add CONSTRAINT CHK_Propiedad_AreaM2_Valid CHECK (areaM2 > 0);
+GO
+
 -- FK + CHECKS
 ALTER TABLE Propiedad
 ADD CONSTRAINT FK_Propiedad_EstadoPropiedad 

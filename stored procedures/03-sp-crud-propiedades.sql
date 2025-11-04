@@ -84,7 +84,12 @@ CREATE OR ALTER PROCEDURE sp_updatePropiedad
   @_precio           MONEY = NULL,
   @_idEstado         INT = NULL,
   @_idTipoInmueble   INT = NULL,
-  @_identificacion   INT = NULL
+  @_identificacion   INT = NULL,
+  @_imagenUrl        NVARCHAR(500) = NULL,
+  @_cantBannios      INT = NULL,
+  @_cantHabitaciones INT = NULL,
+  @_areaM2           FLOAT = NULL,
+  @_amueblado        BIT = NULL
 AS
 BEGIN
   BEGIN TRY
@@ -127,15 +132,42 @@ BEGIN
       RETURN;
     END
 
+    -- Validaciones para nuevos campos
+    IF @_cantBannios IS NOT NULL AND @_cantBannios < 0
+    BEGIN
+      PRINT ' La cantidad de baños debe ser mayor o igual a 0.';
+      ROLLBACK TRANSACTION;
+      RETURN;
+    END
+
+    IF @_cantHabitaciones IS NOT NULL AND @_cantHabitaciones < 0
+    BEGIN
+      PRINT ' La cantidad de habitaciones debe ser mayor o igual a 0.';
+      ROLLBACK TRANSACTION;
+      RETURN;
+    END
+
+    IF @_areaM2 IS NOT NULL AND @_areaM2 < 0
+    BEGIN
+      PRINT ' El area en m2 debe ser mayor o igual a 0.';
+      ROLLBACK TRANSACTION;
+      RETURN;
+    END
+
     -- Actualiza solo los campos enviados, manteniendo los valores actuales si no se envían
-    UPDATE Propiedad
-    SET 
-        ubicacion = CASE WHEN @_ubicacion IS NOT NULL THEN @_ubicacion ELSE ubicacion END,
-        precio = CASE WHEN @_precio IS NOT NULL THEN @_precio ELSE precio END,
-        idEstado = CASE WHEN @_idEstado IS NOT NULL THEN @_idEstado ELSE idEstado END,
-        idTipoInmueble = CASE WHEN @_idTipoInmueble IS NOT NULL THEN @_idTipoInmueble ELSE idTipoInmueble END,
-        identificacion = CASE WHEN @_identificacion IS NOT NULL THEN @_identificacion ELSE identificacion END
-    WHERE idPropiedad = @_idPropiedad;
+  UPDATE Propiedad
+  SET 
+    ubicacion = CASE WHEN @_ubicacion IS NOT NULL THEN @_ubicacion ELSE ubicacion END,
+    precio = CASE WHEN @_precio IS NOT NULL THEN @_precio ELSE precio END,
+    idEstado = CASE WHEN @_idEstado IS NOT NULL THEN @_idEstado ELSE idEstado END,
+    idTipoInmueble = CASE WHEN @_idTipoInmueble IS NOT NULL THEN @_idTipoInmueble ELSE idTipoInmueble END,
+    identificacion = CASE WHEN @_identificacion IS NOT NULL THEN @_identificacion ELSE identificacion END,
+    imagenUrl = CASE WHEN @_imagenUrl IS NOT NULL THEN @_imagenUrl ELSE imagenUrl END,
+    cantBannios = CASE WHEN @_cantBannios IS NOT NULL THEN @_cantBannios ELSE cantBannios END,
+    cantHabitaciones = CASE WHEN @_cantHabitaciones IS NOT NULL THEN @_cantHabitaciones ELSE cantHabitaciones END,
+    areaM2 = CASE WHEN @_areaM2 IS NOT NULL THEN @_areaM2 ELSE areaM2 END,
+    amueblado = CASE WHEN @_amueblado IS NOT NULL THEN @_amueblado ELSE amueblado END
+  WHERE idPropiedad = @_idPropiedad;
 
     COMMIT TRANSACTION;
     PRINT 'Propiedad actualizada correctamente.';
@@ -245,6 +277,7 @@ BEGIN
     p.identificacion as propietarioIdentificacion,
     (propietario.nombre + ' ' + propietario.apellido1 + ISNULL(' ' + propietario.apellido2, '')) propietarioNombre,
     p.imagenUrl,
+  p.cantHabitaciones,
     p.cantBannios,
     p.areaM2,
     p.amueblado
@@ -276,6 +309,7 @@ BEGIN
     p.identificacion as propietarioIdentificacion,
     (propietario.nombre + ' ' + propietario.apellido1 + ISNULL(' ' + propietario.apellido2, '')) propietarioNombre,
     p.imagenUrl,
+  p.cantHabitaciones,
     p.cantBannios,
     p.areaM2,
     p.amueblado
@@ -287,3 +321,18 @@ BEGIN
 END
 GO
 -- propiedades por id 
+
+
+
+exec sp_insertPropiedad
+  @ubicacion = 'Calle Falsa 123',
+  @precio = 150000.00,
+  @idEstado = 1,
+  @idTipoInmueble = 1,
+  @identificacion = 504440503,
+  @imagenUrl = 'http://example.com/imagen.jpg',
+  @cantHabitaciones = 35,
+  @cantBannios = 2,
+  @areaM2 = 100.0,
+  @amueblado = 1;
+GO
