@@ -111,10 +111,6 @@ ADD CONSTRAINT ck_Comision_Porcentaje_Rango
 CHECK (porcentajeComision >= 0 AND porcentajeComision <= 100);
 
 ALTER TABLE Comision
-ADD CONSTRAINT ck_Comision_Estado_Valido
-CHECK (estado IN (0,1));
-
-ALTER TABLE Comision
 ADD CONSTRAINT ck_Comision_IdAgente_Pos CHECK (idAgente > 0);
 
 ALTER TABLE Comision

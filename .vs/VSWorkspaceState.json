@@ -2,15 +2,15 @@
   "ExpandedNodes": [
     "",
     "\\audit",
-    "\\backup",
     "\\functions",
+    "\\Inserts",
     "\\login",
     "\\maintenance",
+    "\\maintenance\\backup",
     "\\schema",
     "\\stored procedures",
-    "\\triggers",
-    "\\views"
+    "\\triggers"
   ],
-  "SelectedNode": "\\schema\\06-tables-contrato.sql",
+  "SelectedNode": "\\schema\\08-create-all-tables.sql",
   "PreviewInSolutionExplorer": false
 }

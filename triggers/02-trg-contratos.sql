@@ -67,3 +67,4 @@ BEGIN
     WHERE idContrato IN (SELECT @prefijo + ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) + @ultimoConsecutivo FROM inserted);
 END;
 GO
+

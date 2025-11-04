@@ -224,15 +224,13 @@ BEGIN
       c.montoTotal,
       c.deposito,
       c.porcentajeComision,
-      cm.montoComision,
-      c.estado
+      cm.montoComision
   FROM Contrato c
   INNER JOIN TipoContrato tc ON c.idTipoContrato = tc.idTipoContrato
   INNER JOIN Propiedad p ON c.idPropiedad = p.idPropiedad
   LEFT JOIN Comision cm
             ON cm.idContrato  = c.idContrato
             AND cm.idAgente = @idAgente
-            AND cm.estado = 1
   WHERE c.idAgente = @idAgente
   ORDER BY c.fechaInicio DESC;
 END;
@@ -276,8 +274,7 @@ BEGIN
       apellido1, 
       apellido2, 
       telefono, 
-      comisionAcumulada, 
-      estado
+      comisionAcumulada
     FROM Agente
     WHERE identificacion = @_identificacion;
   END TRY
@@ -353,9 +350,6 @@ BEGIN
     c.montoComision,
     c.porcentajeComision,
     c.fechaComision,
-    c.estado,
-    c.mes,
-    c.anio,
     f.montoPagado,
     f.estadoPago
   FROM Comision c
