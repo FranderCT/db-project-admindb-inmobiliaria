@@ -29,4 +29,10 @@ GO
 
 
 EXEC dbo.sp_tipoInmuebleInsertar @nombre = 'Apartamento';
+EXEC dbo.sp_tipoInmuebleInsertar @nombre = 'Casa';
+EXEC dbo.sp_tipoInmuebleInsertar @nombre = 'Condominio';
+EXEC dbo.sp_tipoInmuebleInsertar @nombre = 'Centro comercial';
+EXEC dbo.sp_tipoInmuebleInsertar @nombre = 'Local comercial';
+EXEC dbo.sp_tipoInmuebleInsertar @nombre = 'Oficina';
+EXEC dbo.sp_tipoInmuebleInsertar @nombre = 'Alamcén';
 GO

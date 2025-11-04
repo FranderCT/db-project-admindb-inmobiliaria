@@ -9,7 +9,7 @@ CREATE TABLE AuditoriaCliente (
     nombre VARCHAR(30),
     apellido1 VARCHAR(30),
     apellido2 VARCHAR(30),
-    telefono VARCHAR(30),
+    telefono int,
     estado BIT,
     accion NVARCHAR(10),         
     usuario NVARCHAR(250),       
@@ -20,7 +20,7 @@ CREATE TABLE AuditoriaCliente (
 GO
 -- Trigger 
 -- ========================================
-CREATE OR ALTER TRIGGER tr_auditoria_cliente
+CREATE OR ALTER TRIGGER trg_auditoriaCliente
 ON Cliente
 AFTER INSERT, UPDATE, DELETE
 AS

@@ -27,7 +27,7 @@ GO
 
 --  Trigger 
 -- ========================================
-CREATE OR ALTER TRIGGER tr_auditoria_propiedad
+CREATE OR ALTER TRIGGER tr_auditoriaPropiedad
 ON Propiedad
 AFTER INSERT, UPDATE, DELETE
 AS

@@ -2,13 +2,15 @@
 USE AltosDelValle;
 GO
 
-
+-- TABLA CLIENTES
+use AltosDelValle
+GO
 CREATE OR ALTER PROCEDURE dbo.sp_insertCliente
     @identificacion INT,
     @nombre         VARCHAR(30),
     @apellido1      VARCHAR(30),
     @apellido2      VARCHAR(30) = NULL,
-    @telefono       VARCHAR(30)
+    @telefono       int
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -55,6 +57,8 @@ END
 GO
 
 -- sp leer todos los clientes 
+use AltosDelValle
+GO
 CREATE OR ALTER PROCEDURE dbo.sp_clienteLeerTodos
 AS
 BEGIN
@@ -67,61 +71,15 @@ BEGIN
 END
 GO
 
--- sp para ver las propiedad de un cliente
-USE AltosDelValle
-GO
-
-CREATE OR ALTER PROCEDURE sp_clienteVerPropiedades
-  @identificacion INT
-AS
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1
-    FROM Propiedad p
-    WHERE p.identificacion = @identificacion
-  )
-  BEGIN
-    RAISERROR('El cliente no tiene propiedades asociadas.', 16, 1);
-    RETURN;
-  END
-
-  SELECT p.*
-  FROM Propiedad p
-  WHERE p.identificacion = @identificacion;
-END
-GO
-
-
--- SP_DELETE
--- este sp solo desactiva el cliente (estado = 0)
-CREATE OR ALTER PROCEDURE sp_clienteDesactivar
-    @identificacion INT
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    IF @identificacion IS NULL OR @identificacion <= 0
-        THROW 50000, 'La identificación es obligatoria y debe ser > 0.', 1;
-    -- acutalizar estado a 0 (inactivo)
-    UPDATE dbo.Cliente
-    SET estado = 0
-    WHERE identificacion = @identificacion and estado = 1;
-
-    IF @@ROWCOUNT = 0
-        THROW 50000, 'Cliente no encontrado.', 1;
-END
-GO
-
-USE AltosDelValle;
-GO
-
 -- sp para actualizar cliente
+use AltosDelValle
+GO
 CREATE OR ALTER PROCEDURE dbo.sp_updateCliente
   @identificacion INT,
   @nombre         VARCHAR(30) = NULL,
   @apellido1      VARCHAR(30) = NULL,
   @apellido2      VARCHAR(30) = NULL,
-  @telefono       VARCHAR(30) = NULL,
+  @telefono       int = NULL,
   @estado         BIT = NULL
 AS
 BEGIN
@@ -153,29 +111,113 @@ BEGIN
 END
 GO
 
--- sp actualizar estado del cliente
-CREATE OR ALTER PROCEDURE dbo.sp_clienteActualizarEstado
-  @identificacion INT,
-  @estado         BIT
+-- sp para ver el historial de contratos en los que ha participado un cliente
+use AltosDelValle
+GO
+CREATE OR ALTER PROCEDURE  dbo.sp_contratoHistorialPorCliente
+    @identificacion INT
 AS
 BEGIN
-  SET NOCOUNT ON;
+    SET NOCOUNT ON;
 
-  IF @identificacion IS NULL OR @identificacion <= 0
-      RAISERROR('La identificación es obligatoria y debe ser > 0.', 16, 1);
+    -- Validación mínima
+    IF @identificacion IS NULL
+    BEGIN
+        RAISERROR('El parámetro @identificacion es obligatorio.', 16, 1);
+        RETURN;
+    END
 
-  IF NOT EXISTS (SELECT 1 FROM dbo.Cliente WHERE identificacion = @identificacion)
-      RAISERROR('Cliente no encontrado.', 16, 1);
+    -- Comprueba si el cliente existe (opcional)
+    IF NOT EXISTS (SELECT 1 FROM Cliente WHERE identificacion = @identificacion)
+    BEGIN
+        RAISERROR('Cliente con identificaci\u00f3n %d no existe.', 16, 1, @identificacion);
+        RETURN;
+    END
 
-  UPDATE dbo.Cliente
-  SET estado = @estado
+    -- Consulta principal: contratos vinculados al cliente mediante ClienteContrato
+    SELECT
+        cc.idClienteContrato,
+        cc.identificacion,
+        cli.nombre,
+        cli.apellido1,
+        cli.apellido2,
+        cc.idRol,
+        tr.nombre,
+        c.idContrato,
+        c.fechaInicio,
+        c.fechaFin,
+        c.fechaFirma,
+        c.fechaPago,
+        c.idTipoContrato,
+        tc.nombre,
+        c.idPropiedad,
+        p.ubicacion,
+        p.precio,
+        c.idAgente,
+        a.nombre,
+        a.apellido1,
+        a.apellido2,
+        c.montoTotal,
+        c.deposito,
+        c.porcentajeComision,
+        c.cantidadPagos,
+        c.estado,
+        ISNULL(f.factura_count, 0),
+        ISNULL(f.total_pagado, 0),
+        f.ultima_factura_emision,
+        CASE WHEN p.identificacion = cc.identificacion THEN 'Propietario' ELSE 'Comprador' END
+    FROM ClienteContrato cc
+    INNER JOIN Contrato c ON cc.idContrato = c.idContrato
+    LEFT JOIN Cliente cli ON cc.identificacion = cli.identificacion
+    LEFT JOIN TipoRol tr ON cc.idRol = tr.idRol
+    LEFT JOIN Propiedad p ON c.idPropiedad = p.idPropiedad
+    LEFT JOIN Agente a ON c.idAgente = a.identificacion
+    LEFT JOIN TipoContrato tc ON c.idTipoContrato = tc.idTipoContrato
+    LEFT JOIN (
+        SELECT idContrato,
+                COUNT(*) factura_count,
+                SUM(montoPagado) total_pagado,
+                MAX(fechaEmision) ultima_factura_emision
+        FROM Factura
+        GROUP BY idContrato
+    ) f ON c.idContrato = f.idContrato
+    WHERE cc.identificacion = @identificacion;
+END
+GO
+
+use AltosDelValle
+GO
+create or alter PROCEDURE sp_clientePorIdentificacion
+  @identificacion INT
+AS
+BEGIN
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM Cliente
+    WHERE identificacion = @identificacion
+  )
+  BEGIN
+    RAISERROR('Cliente no encontrado.', 16, 1);
+    RETURN;
+  END
+
+  SELECT 
+    identificacion,
+    nombre,
+    apellido1,
+    apellido2,
+    telefono,
+    estado
+  FROM Cliente
   WHERE identificacion = @identificacion;
 END
 GO
 
 ---TABLA INTERMEDIA ClienteContrato
-
 ---sp_clienteContrato_insertar
+use AltosDelValle
+GO
 CREATE or alter PROCEDURE sp_insertClientesContrato
   @identificacion INT,
   @idRol INT,
@@ -199,7 +241,10 @@ BEGIN
 END
 GO
 
---sp_clienteContrato_insertar_varios  --Este inserta varios clientes en un contrato  
+--sp_clienteContrato_insertar_varios  
+--Este inserta varios clientes en un contrato  
+use AltosDelValle
+GO
 CREATE or alter PROCEDURE  sp_clienteContratoInsertarVarios
   @json NVARCHAR(MAX)
 AS
@@ -233,6 +278,8 @@ END
 GO
 
 ---sp_clienteContrato_listarTodos
+use AltosDelValle
+GO
 CREATE or alter PROCEDURE  sp_clienteContratoListarTodos
 AS
 BEGIN
@@ -250,6 +297,8 @@ END
 GO
 
 ----sp_clienteContrato_porContrato
+use AltosDelValle
+GO
 CREATE or alter PROCEDURE  sp_clienteContratoPorContrato
   @idContrato INT
 AS
@@ -268,6 +317,8 @@ END
 GO
 
 ---sp_clienteContrato_porCliente
+use AltosDelValle
+GO
 CREATE or alter PROCEDURE  sp_clienteContratoPorCliente
   @identificacion INT
 AS
@@ -289,6 +340,8 @@ END
 GO
 
 ----sp_clienteContrato_porRol
+use AltosDelValle
+GO
 CREATE or alter PROCEDURE  sp_clienteContratoPorRol
   @idRol INT
 AS
@@ -308,37 +361,6 @@ BEGIN
 END
 GO
 
-use AltosDelValle
-GO
-
-create or alter PROCEDURE sp_clientePorIdentificacion
-  @identificacion INT
-AS
-BEGIN
-
-  IF NOT EXISTS (
-    SELECT 1
-    FROM Cliente
-    WHERE identificacion = @identificacion
-  )
-  BEGIN
-    RAISERROR('Cliente no encontrado.', 16, 1);
-    RETURN;
-  END
-
-  SELECT 
-    identificacion,
-    nombre,
-    apellido1,
-    apellido2,
-    telefono,
-    estado
-  FROM Cliente
-  WHERE identificacion = @identificacion;
-END
-GO
-
-
 ---INSERT PARA TIPO DE ROL 
 USE AltosDelValle; 
 INSERT INTO TipoRol (nombre) VALUES 
@@ -347,5 +369,3 @@ INSERT INTO TipoRol (nombre) VALUES
   ('Comprador'),
   ('Vendedor');
 GO
-
-

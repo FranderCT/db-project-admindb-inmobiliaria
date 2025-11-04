@@ -6,7 +6,7 @@ create or alter procedure dbo.sp_insertAgente
   @nombre             varchar(30),
   @apellido1          varchar(30),
   @apellido2          varchar(30) = NULL,
-  @telefono            varchar(30)
+  @telefono            int
   
 as 
 BEGIN
@@ -53,7 +53,6 @@ go
 --SP_READ VER TODOS LOS AGENTES (TANTO ACTIVOS COMO INACTIVOS)
 USE AltosDelValle
 GO
-
 CREATE OR ALTER PROCEDURE dbo.sp_viewAllAgentes
 AS
 BEGIN
@@ -69,11 +68,8 @@ BEGIN
 END
 GO
 
-
---SP_READ VER AGENTE POR SU ID
-USE AltosDelValle;
+USE AltosDelValle
 GO
-
 CREATE OR ALTER PROCEDURE dbo.sp_getByIdAgente
   @_identificacion INT
 AS
@@ -114,7 +110,6 @@ GO
 -- SP_READ VER TODOS LOS AGENTES ACTIVOS
 USE AltosDelValle
 GO
-
 CREATE OR ALTER PROCEDURE dbo.sp_viewAllActiveAgentes
 AS
 BEGIN
@@ -132,12 +127,9 @@ BEGIN
 END
 GO
 
-
 -- SP_READ VER TODOS LOS AGENTES INACTIVOS
-
 USE AltosDelValle
 GO
-
 CREATE OR ALTER PROCEDURE dbo.sp_viewAllInactiveAgentes
 AS
 BEGIN
@@ -155,10 +147,8 @@ END
 GO
 
 -- SP_READ VER TODOS LOS AGENTES (Identificacion y Nombre)
-
 USE AltosDelValle;
 GO
-
 CREATE OR ALTER PROCEDURE dbo.sp_nameListAgentes
   @_identificacion INT = NULL
 AS
@@ -209,7 +199,6 @@ GO
 --SP READ VER LOS CONTRATOS EN QUE HA PARTICIPADO UN AGENTE
 USE AltosDelValle;
 GO
-
 CREATE OR ALTER PROCEDURE sp_getContratosPorAgente
   @idAgente BIGINT
 AS
@@ -249,18 +238,15 @@ BEGIN
 END;
 GO
 
-
-
 -- SP_UPDATE
 USE AltosDelValle;
 GO
-
 CREATE OR ALTER PROCEDURE dbo.sp_updateAgente
   @_identificacion INT,
   @_nombre         VARCHAR(30) = NULL,
   @_apellido1      VARCHAR(30) = NULL,
   @_apellido2      VARCHAR(30) = NULL,
-  @_telefono       VARCHAR(30) = NULL
+  @_telefono       int = NULL
 AS
 BEGIN
   SET NOCOUNT ON;
@@ -312,7 +298,6 @@ GO
 -- SP_Update (Inactiva un Agente existente)
 USE AltosDelValle;
 GO
-
 CREATE OR ALTER PROCEDURE dbo.sp_disableAgente
   @identificacion INT
 AS
@@ -334,7 +319,6 @@ GO
 -- SP_Update (Activa un Agente existente)
 USE AltosDelValle;
 GO
-
 CREATE OR ALTER PROCEDURE dbo.sp_enableAgente
   @identificacion INT
 AS
@@ -353,41 +337,30 @@ BEGIN
 END
 GO
 
--- SP_SUMARCOMISION
-USE AltosDelValle
+USE AltosDelValle;
 GO
-create or alter procedure sp_SumarComisionAgente
-  @_idAgente int,
-  @_monto    decimal(18,2)
-as
-begin
-  begin try
-    begin transaction
-      if @_monto IS NULL OR @_monto <= 0
-		BEGIN 
-			print 'El monto debe ser > 0.'; 
-			rollback transaction;
-			return;
-		END
+CREATE OR ALTER PROCEDURE sp_getComisiones
+AS
+BEGIN
+  SET NOCOUNT ON;
 
-      if not exists (select 1 from Agente where identificacion = @_idAgente)
-		begin 
-			print 'El agente no existe.'; 
-			rollback transaction;
-			return; 
-		end
-
-      update Agente
-      set comisionAcumulada = comisionAcumulada + @_monto
-      where identificacion = @_idAgente;
-    commit transaction;
-    print 'Comisión actualizada correctamente.';
-
-  end try
-  BEGIN CATCH
-    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
-    PRINT 'Error: ' + ERROR_MESSAGE();
-  END CATCH
-end
-go
-
+  SELECT 
+    c.idComision,
+    c.idFactura,
+    c.idContrato,
+    a.identificacion AS idAgente,
+    a.nombre AS nombreAgente,
+    c.montoComision,
+    c.porcentajeComision,
+    c.fechaComision,
+    c.estado,
+    c.mes,
+    c.anio,
+    f.montoPagado,
+    f.estadoPago
+  FROM Comision c
+  INNER JOIN Agente a ON c.idAgente = a.identificacion
+  INNER JOIN Factura f ON c.idFactura = f.idFactura
+  ORDER BY c.fechaComision DESC;
+END;
+GO

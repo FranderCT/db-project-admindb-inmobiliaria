@@ -1,9 +1,7 @@
 -- TRIGGERS TABLA FACTURA
 
-
 USE AltosDelValle;
 GO
-
 CREATE OR ALTER TRIGGER trg_GenerarCodigoFactura
 ON dbo.Factura
 INSTEAD OF INSERT
@@ -46,4 +44,3 @@ BEGIN
 
 END;
 GO
-

@@ -81,10 +81,6 @@ create table Comision(
     fechaComision datetime not null default GetDate(),
     montoComision Decimal(18,2) not null,
     porcentajeComision Decimal(5,2) not null,
-    estado bit not null default 1, -- 1 = activa, 0 = anulada
-    mes as month(fechaComision) persisted,
-    anio as year(fechaComision) persisted
-
 )On Facturas
 GO
 

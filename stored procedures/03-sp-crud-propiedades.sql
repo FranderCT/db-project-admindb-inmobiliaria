@@ -1,18 +1,17 @@
 use AltosDelValle
 go
 
-
 -- SP_INSERT 
 use AltosDelValle
 go
 create or alter procedure sp_insertPropiedad
-	@ubicacion		varchar(100),
-	@precio         money,
-	@idEstado       int,
-	@idTipoInmueble int,
-	@identificacion int,
-	@imagenUrl NVARCHAR(500)=NULL,
-	@cantHabitaciones int,
+  @ubicacion		varchar(100),
+  @precio         money,
+  @idEstado       int,
+  @idTipoInmueble int,
+  @identificacion int,
+  @imagenUrl NVARCHAR(500)=NULL,
+  @cantHabitaciones int,
   @cantBannios int,
   @areaM2 FLOAT,
   @amueblado bit
@@ -77,7 +76,6 @@ end
 go
 
 -- SP_UPDATE
-
 CREATE OR ALTER PROCEDURE sp_updatePropiedad
   @_idPropiedad      INT,
   @_ubicacion        VARCHAR(100) = NULL,
@@ -181,10 +179,7 @@ BEGIN
 END
 GO
 
-
 -- SP_UPDATEESTADO
-USE AltosDelValle
-GO
 create or alter procedure sp_updateEstadoPropiedad
   @_idPropiedad   int,
   @_idEstadoNuevo int
@@ -245,8 +240,6 @@ begin
 end 
 go
 
--- final
-
 -- propiedades por cliente
 create or alter procedure sp_propiedadesPorCliente
   @identificacion INT
@@ -291,7 +284,6 @@ BEGIN
   ORDER BY p.idPropiedad;
 END
 GO
--- final propiedades por cliente
 
 -- propiedades por id
 create or alter procedure sp_obtenerPropiedadPorId
@@ -321,20 +313,4 @@ BEGIN
   LEFT JOIN Cliente propietario ON p.identificacion = propietario.identificacion
   WHERE p.idPropiedad = @idPropiedad;
 END
-GO
--- propiedades por id 
-
-
-
-exec sp_insertPropiedad
-  @ubicacion = 'Calle Falsa 123',
-  @precio = 150000.00,
-  @idEstado = 1,
-  @idTipoInmueble = 1,
-  @identificacion = 504440503,
-  @imagenUrl = 'http://example.com/imagen.jpg',
-  @cantHabitaciones = 35,
-  @cantBannios = 2,
-  @areaM2 = 100.0,
-  @amueblado = 1;
 GO

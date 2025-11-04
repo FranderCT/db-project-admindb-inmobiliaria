@@ -1,6 +1,5 @@
 USE AltosDelValle;
 GO
-
 CREATE OR ALTER PROCEDURE dbo.sp_insertFactura
   @idContrato     INT,
   @porcentajeIva  DECIMAL(5,2) = 13.00,
@@ -195,14 +194,9 @@ BEGIN
 END;
 GO
 
-
-
-
-
 -- SP_READ
 USE AltosDelValle;
 GO
-
 CREATE OR ALTER PROCEDURE dbo.sp_getFacturas
 AS
 BEGIN
@@ -253,12 +247,9 @@ BEGIN
 END;
 GO
 
-
-
 --SP READ
 USE AltosDelValle;
 GO
-
 CREATE OR ALTER PROCEDURE dbo.sp_getFacturasFiltradas
     @estadoPago BIT = NULL,         
     @idContrato INT = NULL,
@@ -335,15 +326,9 @@ BEGIN
 END;
 GO
 
-
-
-
-
-
 -- SP_UPDATEESTADO
 USE AltosDelValle;
 GO
-
 CREATE OR ALTER PROCEDURE dbo.sp_updateFacturaEstado
   @idFactura INT
 AS
@@ -531,183 +516,9 @@ BEGIN
 END;
 GO
 
-
-
--- TABLA INTERMEDIA FACTURA - CLIENTE 
-
--- INSERT
-/*
-USE AltosDelValle;
-GO
-
-CREATE OR ALTER PROCEDURE sp_insertFacturaCliente
-  @identificacion INT,
-  @idFactura INT
-AS
-BEGIN
-  SET NOCOUNT ON;
-
-  DECLARE @idContrato INT;
-
-  -- Validar existencia de factura
-  SELECT @idContrato = idContrato FROM Factura WHERE idFactura = @idFactura;
-  IF @idContrato IS NULL
-    THROW 50010, 'La factura no existe.', 1;
-
-  -- Validar que el cliente pertenezca al contrato de esa factura
-  IF NOT EXISTS (
-    SELECT 1
-    FROM ClienteContrato
-    WHERE identificacion = @identificacion
-      AND idContrato = @idContrato
-  )
-    THROW 50011, 'El cliente no pertenece al contrato asociado a esta factura.', 1;
-
-
-    --Validar que el cliente no se haya asociado ya a esa factura.
-    IF EXISTS(
-        SELECT 1
-        FROM FacturaCliente
-        WHERE identificacion = @identificacion
-        AND idFactura = @idFactura
-    )
-    THROW 50017, 'El cliente ya ha sido asociado a esta factura', 1;
-
-  -- Insertar en FacturaCliente
-  INSERT INTO FacturaCliente (identificacion, idFactura)
-  VALUES (@identificacion, @idFactura);
-
-  -- Devolver el registro insertado con detalles
-  SELECT 
-    fc.idFacturaCliente,
-    fc.idFactura,
-    c.identificacion,
-    c.nombre AS nombreCliente
-  FROM FacturaCliente fc
-  INNER JOIN Cliente c ON fc.identificacion = c.identificacion
-  WHERE fc.idFacturaCliente = SCOPE_IDENTITY();
-END;
-GO
-
-
---INSERT DE FACTURA CON VARIOS CLIENTES.
-
-USE AltosDelValle;
-GO
-
-CREATE OR ALTER PROCEDURE sp_insertFacturaClienteVarios
-  @json NVARCHAR(MAX)
-AS
-BEGIN
-  SET NOCOUNT ON;
-  BEGIN TRY
-    BEGIN TRANSACTION;
-
-    DECLARE @data TABLE (
-      identificacion INT,
-      idFactura INT
-    );
-
-    INSERT INTO @data (identificacion, idFactura)
-    SELECT identificacion, idFactura
-    FROM OPENJSON(@json)
-    WITH (
-      identificacion INT,
-      idFactura INT
-    );
-
-    DECLARE @idFactura INT, @idContrato INT;
-    SELECT TOP 1 @idFactura = idFactura FROM @data;
-    SELECT @idContrato = idContrato FROM Factura WHERE idFactura = @idFactura;
-
-    IF @idContrato IS NULL
-      THROW 50010, 'La factura no existe o no tiene contrato asociado.', 1;
-
-    -- Validar que todos los clientes pertenezcan al contrato
-    IF EXISTS (
-      SELECT d.identificacion
-      FROM @data d
-      WHERE d.identificacion NOT IN (
-        SELECT cc.identificacion FROM ClienteContrato cc WHERE cc.idContrato = @idContrato
-      )
-    )
-      THROW 50011, 'Uno o m s clientes no pertenecen al contrato asociado a la factura.', 1;
-
-
-    -- Validar que los clientes no hayan sido agregados ya a esa factura.
-    IF EXISTS(
-        SELECT 1
-        FROM @data d
-        INNER JOIN FacturaCliente fc
-        ON fc.idFactura = d.idFactura AND fc.identificacion = d.identificacion
-    )
-    THROW 50017, 'Uno o m s clientes ya est n asociados a esta factura', 1;
-
-    -- Insertar en FacturaCliente
-    INSERT INTO FacturaCliente (identificacion, idFactura)
-    SELECT identificacion, idFactura FROM @data;
-
-    -- Devolver registros insertados
-    SELECT 
-      fc.idFacturaCliente,
-      fc.idFactura,
-      c.identificacion,
-      c.nombre AS nombreCliente
-    FROM FacturaCliente fc
-    INNER JOIN Cliente c ON fc.identificacion = c.identificacion
-    WHERE fc.idFactura IN (SELECT DISTINCT idFactura FROM @data);
-
-    COMMIT TRANSACTION;
-  END TRY
-  BEGIN CATCH
-    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
-    DECLARE @msg NVARCHAR(4000) = ERROR_MESSAGE();
-    THROW 50099, @msg, 1;
-  END CATCH;
-END;
-GO
-
-*/
-
-
---COMISIONES
-
--- SP_READ
-
-USE AltosDelValle;
-GO
-
-CREATE OR ALTER PROCEDURE sp_getComisiones
-AS
-BEGIN
-  SET NOCOUNT ON;
-
-  SELECT 
-    c.idComision,
-    c.idFactura,
-    c.idContrato,
-    a.identificacion AS idAgente,
-    a.nombre AS nombreAgente,
-    c.montoComision,
-    c.porcentajeComision,
-    c.fechaComision,
-    c.estado,
-    c.mes,
-    c.anio,
-    f.montoPagado,
-    f.estadoPago
-  FROM Comision c
-  INNER JOIN Agente a ON c.idAgente = a.identificacion
-  INNER JOIN Factura f ON c.idFactura = f.idFactura
-  ORDER BY c.fechaComision DESC;
-END;
-GO
-
-
 --READ get contratos para crear facturas
 USE AltosDelValle;
 GO
-
 CREATE OR ALTER PROCEDURE dbo.sp_getContratosDisponiblesParaFactura
 AS
 BEGIN
@@ -735,4 +546,3 @@ BEGIN
     );
 END;
 GO
-

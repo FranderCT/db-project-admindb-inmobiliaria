@@ -27,7 +27,7 @@ GO
 
 --  Trigger 
 -- ========================================
-CREATE OR ALTER TRIGGER tr_auditoria_factura
+CREATE OR ALTER TRIGGER tr_auditoriaFactura
 ON Factura
 AFTER INSERT, UPDATE, DELETE
 AS

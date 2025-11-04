@@ -1,12 +1,10 @@
 -- TRIGGERS TABLA CLIENTE
+use AltosDelValle
+go
 
 --TRIGGER Evita desactivar clientes (UPDATE estado = 0)
-    --si tienen facturas o propiedades asociadas.
-    --Protege el SP sp_cliente_desactivar.
-	use AltosDelValle
-	go
-
-	CREATE OR ALTER TRIGGER trg_evitarDesactivarCliente_Update
+--si tienen facturas o propiedades asociadas.
+CREATE OR ALTER TRIGGER trg_evitarDesactivarClienteUpdate
 	ON dbo.Cliente
 	FOR UPDATE
 	AS
@@ -52,7 +50,6 @@
 	END
 	GO
 
-    
 -- Evita insertar o actualizar un cliente con un teléfono ya asignado a otro cliente activo.
 CREATE TRIGGER trg_evitarDuplicadosDeTelefonos
 ON Cliente
@@ -105,4 +102,3 @@ BEGIN
     END;
 END;
 GO
-

@@ -14,7 +14,7 @@ CREATE OR ALTER PROCEDURE sp_insertContratoConNuevasCondiciones
     @deposito MONEY = NULL,
     @porcentajeComision DECIMAL(5,2) = NULL,
     @estado NVARCHAR(20) = NULL,
-    @cantidadPagos INT = NULL,              
+    @cantidadPagos INT = NULL,
     @condiciones NVARCHAR(MAX)
 AS
 BEGIN
@@ -170,7 +170,7 @@ CREATE OR ALTER PROCEDURE sp_updateContratoConCondiciones
     @_deposito MONEY = NULL,
     @_porcentajeComision DECIMAL(5,2) = NULL,
     @_estado NVARCHAR(20) = NULL,
-    @_cantidadPagos INT = NULL,            
+    @_cantidadPagos INT = NULL,
     @_condiciones NVARCHAR(MAX) = NULL
 AS
 BEGIN
@@ -229,8 +229,6 @@ BEGIN
     END CATCH
 END;
 GO
-
--- SP_DELETE
 
 ------   sp_detalleContrato (vista)
 CREATE OR ALTER PROCEDURE dbo.sp_detalleContrato
@@ -312,7 +310,6 @@ BEGIN
   SELECT @json AS data;
 END;
 GO
-
 
 ------   sp_detalleGeneralContrato (todo el contenido de un contrato)
 CREATE OR ALTER PROCEDURE dbo.sp_detalleGeneralContrato
@@ -420,10 +417,7 @@ BEGIN
 END;
 GO
 
-
-
 ---TABLA TIPO CONTRATO
-
 ---sp_insertTipoContrato
 CREATE OR ALTER PROCEDURE sp_insertTipoContrato
   @nombre VARCHAR(20)
@@ -473,37 +467,6 @@ BEGIN
 END;
 GO
 
----sp_updateTipoContrato
-CREATE OR ALTER PROCEDURE sp_updateTipoContrato
-  @idTipoContrato INT,
-  @nombre VARCHAR(20)
-AS
-BEGIN
-  BEGIN TRY
-    BEGIN TRANSACTION;
-
-    IF NOT EXISTS (SELECT 1 FROM TipoContrato WHERE idTipoContrato = @idTipoContrato)
-      THROW 50010, 'No existe un tipo de contrato con ese ID.', 1;
-
-    UPDATE TipoContrato
-    SET nombre = @nombre
-    WHERE idTipoContrato = @idTipoContrato;
-
-    COMMIT TRANSACTION;
-    SELECT @idTipoContrato AS idTipoContrato, 'Tipo de contrato actualizado correctamente' AS mensaje;
-  END TRY
-  BEGIN CATCH
-    IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
-    THROW;
-  END CATCH
-END;
-GO
-
-
 --TABLA TIPO CONTRATO 
 INSERT INTO TipoContrato (nombre) VALUES ('Venta'), ('Alquiler');
 GO
-
-
-
-

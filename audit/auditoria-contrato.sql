@@ -29,7 +29,7 @@ GO
 
 -- Trigger
 -- ========================================
-CREATE OR ALTER TRIGGER tr_auditoria_contrato
+CREATE OR ALTER TRIGGER trg_auditoriaContrato
 ON Contrato
 AFTER INSERT, UPDATE, DELETE
 AS

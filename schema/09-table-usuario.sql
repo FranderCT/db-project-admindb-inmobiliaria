@@ -31,5 +31,3 @@ go
  add constraint FK_RolUsuario
  foreign key (idRolUsuario) references RolUsuario(idRolUsuario);
  go
-
-

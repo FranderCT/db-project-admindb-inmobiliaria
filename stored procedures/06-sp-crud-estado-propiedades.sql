@@ -16,8 +16,10 @@ BEGIN
     SELECT nombre FROM EstadoPropiedad WHERE nombre = @nombre;
 END
 GO
--- sp para leer todos los estados de propiedades
 
+-- sp para leer todos los estados de propiedades
+use AltosDelValle
+GO
 create or alter procedure sp_readEstadoPropiedad
 AS
 BEGIN
@@ -31,10 +33,9 @@ GO
 
 
 
-EXEC dbo.sp_insertEstadoPropiedad @nombre = 'disponible';
-EXEC dbo.sp_insertEstadoPropiedad @nombre = 'reservada';
-EXEC dbo.sp_insertEstadoPropiedad @nombre = 'en mantenimiento';
-EXEC dbo.sp_insertEstadoPropiedad @nombre = 'vendida';
+EXEC dbo.sp_insertEstadoPropiedad @nombre = 'Disponible';
+EXEC dbo.sp_insertEstadoPropiedad @nombre = 'Reservada';
+EXEC dbo.sp_insertEstadoPropiedad @nombre = 'En mantenimiento';
+EXEC dbo.sp_insertEstadoPropiedad @nombre = 'Vendida';
 
 select * from EstadoPropiedad;
-

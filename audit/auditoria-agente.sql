@@ -8,7 +8,7 @@ CREATE TABLE AuditoriaAgente (
     nombre VARCHAR(30),
     apellido1 VARCHAR(30),
     apellido2 VARCHAR(30),
-    telefono VARCHAR(30),
+    telefono int,
     comisionAcumulada DECIMAL(18,2),
     estado BIT,
     accion NVARCHAR(10),
@@ -19,7 +19,7 @@ CREATE TABLE AuditoriaAgente (
 );
 GO
 --  Trigger 
-CREATE OR ALTER TRIGGER tr_auditoria_agente
+CREATE OR ALTER TRIGGER tr_auditoriaAgente
 ON Agente
 AFTER INSERT, UPDATE, DELETE
 AS
