@@ -110,7 +110,7 @@ ADD CONSTRAINT CHK_Propiedad_Ubicacion_Longitud CHECK (LEN(ubicacion) >= 5);
 GO
 --			TABLA CONTRATO
 CREATE TABLE Contrato(
-	idContrato int identity (1,1)PRIMARY KEY not null,
+	idContrato int PRIMARY KEY,
 	fechaInicio DATETIME NULL, 
 	fechaFin DATETIME NULL, 
 	fechaFirma DATETIME NULL, 
@@ -192,7 +192,7 @@ GO
 CREATE TABLE ContratoTerminos (
     idContratoTerminos INT IDENTITY(1,1) PRIMARY KEY,
     idCondicion INT NOT NULL,
-    idContrato INT NOT NULL
+    idContrato INT NULL,
     -- Foreign keys
     CONSTRAINT FK_ContratoTerminos_TerminosCondiciones FOREIGN KEY (idCondicion) REFERENCES TerminosCondiciones(idCondicion),
     CONSTRAINT FK_ContratoTerminos_Contrato FOREIGN KEY (idContrato) REFERENCES Contrato(idContrato)
@@ -201,7 +201,7 @@ CREATE TABLE ContratoTerminos (
 
 -- FACTURA (Contrato, Agente)
 CREATE TABLE Factura(
-    idFactura INT IDENTITY(1,1) NOT NULL,
+    idFactura INT,
     montoPagado DECIMAL(18,2) NOT NULL,
     fechaEmision DATETIME NOT NULL DEFAULT GetDate(),
     fechaPago DATETIME NULL,
@@ -263,7 +263,7 @@ GO
 CREATE TABLE FacturaCliente (
     idFacturaCliente INT IDENTITY(1,1) PRIMARY KEY,
     identificacion INT NOT NULL,
-    idFactura INT NOT NULL,
+    idFactura INT,
     CONSTRAINT FK_FacturaCliente_Cliente FOREIGN KEY (identificacion) REFERENCES Cliente(identificacion),
     CONSTRAINT FK_FacturaCliente_Factura FOREIGN KEY (idFactura) REFERENCES Factura(idFactura)
 );
@@ -274,7 +274,7 @@ GO
 create table Comision(
     idComision int identity(1,1), 
     idAgente int not null,
-    idFactura int not null,
+    idFactura int,
     idContrato int not null,
     fechaComision datetime not null default GetDate(),
     montoComision Decimal(18,2) not null,

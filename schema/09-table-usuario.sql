@@ -33,14 +33,3 @@ go
  go
 
 
-
-insert into RolUsuario (nombre) values ('ADMINISTRADOR');
-insert into RolUsuario (nombre) values ('LECTOR');
-insert into RolUsuario (nombre) values ('EMPLEADO');
-go
-
-
-use AltosDelValle
-GO
-select * from Contrato
-GO

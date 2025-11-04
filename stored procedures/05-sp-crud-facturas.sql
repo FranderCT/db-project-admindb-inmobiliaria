@@ -4,7 +4,7 @@ GO
 CREATE OR ALTER PROCEDURE dbo.sp_insertFactura
   @idContrato     INT,
   @porcentajeIva  DECIMAL(5,2) = 13.00,
-  @idFactura      INT OUTPUT
+  @idFactura      BIGINT OUTPUT
 AS
 BEGIN
   SET NOCOUNT ON;
@@ -134,17 +134,13 @@ BEGIN
       THROW 50022, 'Tipo de contrato desconocido.', 1;
 
     /* ===== Cálculos coherentes ===== */
-    -- IVA: SIEMPRE sobre el monto de la factura y para TODAS las facturas
     SET @iva = ROUND(@montoFactura * (@porcentajeIva / 100.0), 2);
 
-    -- Comisión:
-    --   Venta: siempre sobre el total (solo hay una factura).
-    --   Alquiler: SOLO en la primera factura (sobre el total del contrato). En las demás, 0.
     IF @nombreTipoContrato = 'Venta'
     BEGIN
       SET @montoComision = ROUND(@montoTotalContrato * (@porcentajeComision / 100.0), 2);
     END
-    ELSE  -- Alquiler
+    ELSE
     BEGIN
       IF @facturasEmitidas = 0
       BEGIN
@@ -153,7 +149,7 @@ BEGIN
       ELSE
       BEGIN
         SET @montoComision = 0;
-        SET @porcentajeComision = 0;  -- <- CLAVE: para que el front no muestre comisión en siguientes facturas
+        SET @porcentajeComision = 0;
       END
     END
 
@@ -169,17 +165,11 @@ BEGIN
         @idPropiedad, @idTipoContrato, @montoComision, @porcentajeComision
     );
 
-    SET @idFactura = SCOPE_IDENTITY();
-
-    /* ===== Asociar clientes del contrato ===== */
-    INSERT INTO FacturaCliente (idFactura, identificacion)
-    SELECT @idFactura, cc.identificacion
-    FROM ClienteContrato cc
-    WHERE cc.idContrato = @idContrato
-      AND NOT EXISTS (
-          SELECT 1 FROM FacturaCliente fc
-          WHERE fc.idFactura = @idFactura AND fc.identificacion = cc.identificacion
-      );
+    /* ===== Recuperar idFactura generado por el trigger ===== */
+    SELECT TOP 1 @idFactura = idFactura
+    FROM Factura
+    WHERE idContrato = @idContrato
+    ORDER BY fechaEmision DESC;
 
     COMMIT TRANSACTION;
 
@@ -546,7 +536,7 @@ GO
 -- TABLA INTERMEDIA FACTURA - CLIENTE 
 
 -- INSERT
-
+/*
 USE AltosDelValle;
 GO
 
@@ -677,7 +667,7 @@ BEGIN
 END;
 GO
 
-
+*/
 
 
 --COMISIONES
@@ -746,4 +736,3 @@ BEGIN
 END;
 GO
 
-¿

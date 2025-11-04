@@ -3,7 +3,7 @@ GO
 
 -- FACTURA (Contrato, Agente)
 CREATE TABLE Factura(
-    idFactura INT IDENTITY(1,1) NOT NULL,
+    idFactura INT,
     montoPagado DECIMAL(18,2) NOT NULL,
     fechaEmision DATETIME NOT NULL DEFAULT GetDate(),
     fechaPago DATETIME NULL,
@@ -12,6 +12,7 @@ CREATE TABLE Factura(
     iva DECIMAL(18,2) NOT NULL,
     idContrato INT NOT NULL,
     idAgente INT NOT NULL,
+    idPropiedad int NOT NULL,
     idTipoContrato INT NULL,
     montoComision DECIMAL(18,2) NOT NULL,
     porcentajeComision DECIMAL(5,2) NOT NULL,
@@ -64,7 +65,7 @@ GO
 CREATE TABLE FacturaCliente (
     idFacturaCliente INT IDENTITY(1,1) PRIMARY KEY,
     identificacion INT NOT NULL,
-    idFactura INT NOT NULL,
+    idFactura INT,
     CONSTRAINT FK_FacturaCliente_Cliente FOREIGN KEY (identificacion) REFERENCES Cliente(identificacion),
     CONSTRAINT FK_FacturaCliente_Factura FOREIGN KEY (idFactura) REFERENCES Factura(idFactura)
 );
@@ -75,7 +76,7 @@ GO
 create table Comision(
     idComision int identity(1,1), 
     idAgente int not null,
-    idFactura int not null,
+    idFactura int,
     idContrato int not null,
     fechaComision datetime not null default GetDate(),
     montoComision Decimal(18,2) not null,
@@ -125,7 +126,4 @@ ADD CONSTRAINT ck_Comision_IdContrato_Pos CHECK (idContrato > 0);
 
 ALTER TABLE Comision
 ADD CONSTRAINT ck_Comision_IdFactura_Pos CHECK (idFactura > 0);
-GO
-
-USE AltosDelValle
 GO
