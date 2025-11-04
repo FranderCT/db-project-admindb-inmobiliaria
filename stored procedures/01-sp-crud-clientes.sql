@@ -308,6 +308,36 @@ BEGIN
 END
 GO
 
+use AltosDelValle
+GO
+
+create or alter PROCEDURE sp_clientePorIdentificacion
+  @identificacion INT
+AS
+BEGIN
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM Cliente
+    WHERE identificacion = @identificacion
+  )
+  BEGIN
+    RAISERROR('Cliente no encontrado.', 16, 1);
+    RETURN;
+  END
+
+  SELECT 
+    identificacion,
+    nombre,
+    apellido1,
+    apellido2,
+    telefono,
+    estado
+  FROM Cliente
+  WHERE identificacion = @identificacion;
+END
+GO
+
 
 ---INSERT PARA TIPO DE ROL 
 USE AltosDelValle; 
