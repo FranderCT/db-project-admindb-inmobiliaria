@@ -171,6 +171,8 @@ BEGIN
 
     COMMIT TRANSACTION;
     PRINT 'Propiedad actualizada correctamente.';
+    -- Devolver la fila actualizada
+    SELECT * FROM Propiedad WHERE idPropiedad = @_idPropiedad;
   END TRY
   BEGIN CATCH
     IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
