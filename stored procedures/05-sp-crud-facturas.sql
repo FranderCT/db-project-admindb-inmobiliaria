@@ -29,14 +29,14 @@ BEGIN
       @idEstadoVendida      INT,
       @idEstadoReservada    INT;
 
-    /* ===== Obtener IDs de estado de propiedad ===== */
+    /* ===== Estados requeridos ===== */
     SELECT @idEstadoVendida = idEstadoPropiedad FROM EstadoPropiedad WHERE nombre = 'vendida';
     SELECT @idEstadoReservada = idEstadoPropiedad FROM EstadoPropiedad WHERE nombre = 'reservada';
 
     IF @idEstadoVendida IS NULL OR @idEstadoReservada IS NULL
       THROW 50008, 'No se encontraron los estados de propiedad requeridos (Vendido / Reservado).', 1;
 
-    /* ===== Validaciones base y lectura de contrato ===== */
+    /* ===== Validaciones base y lectura del contrato ===== */
     IF NOT EXISTS (SELECT 1 FROM Contrato WHERE idContrato = @idContrato)
       THROW 50009, 'El contrato indicado no existe.', 1;
 
@@ -84,12 +84,10 @@ BEGIN
 
       SET @montoFactura = @montoTotalContrato;
 
-      -- Actualizar contrato como Finalizado al crear factura
       UPDATE Contrato
       SET estado = 'Finalizado', fechaPago = GETDATE()
       WHERE idContrato = @idContrato;
 
-      -- Marcar propiedad como Vendida
       UPDATE Propiedad
       SET idEstado = @idEstadoVendida
       WHERE idPropiedad = @idPropiedad;
@@ -121,7 +119,6 @@ BEGIN
       IF @montoFactura <= 0
         THROW 50021, 'El monto calculado para la factura de alquiler no es válido.', 1;
 
-      -- Si es la primera factura => activar contrato
       IF @facturasEmitidas = 0
       BEGIN
         UPDATE Contrato
@@ -129,7 +126,6 @@ BEGIN
         WHERE idContrato = @idContrato;
       END
 
-      -- Marcar propiedad como Reservada
       UPDATE Propiedad
       SET idEstado = @idEstadoReservada
       WHERE idPropiedad = @idPropiedad;
@@ -137,23 +133,27 @@ BEGIN
     ELSE
       THROW 50022, 'Tipo de contrato desconocido.', 1;
 
-    /* ===== Cálculos de IVA y Comisión coherentes ===== */
+    /* ===== Cálculos coherentes ===== */
+    -- IVA: SIEMPRE sobre el monto de la factura y para TODAS las facturas
+    SET @iva = ROUND(@montoFactura * (@porcentajeIva / 100.0), 2);
+
+    -- Comisión:
+    --   Venta: siempre sobre el total (solo hay una factura).
+    --   Alquiler: SOLO en la primera factura (sobre el total del contrato). En las demás, 0.
     IF @nombreTipoContrato = 'Venta'
     BEGIN
-      SET @iva = ROUND(@montoTotalContrato * (@porcentajeIva / 100.0), 2);
       SET @montoComision = ROUND(@montoTotalContrato * (@porcentajeComision / 100.0), 2);
     END
-    ELSE IF @nombreTipoContrato = 'Alquiler'
+    ELSE  -- Alquiler
     BEGIN
       IF @facturasEmitidas = 0
       BEGIN
-        SET @iva = ROUND(@montoTotalContrato * (@porcentajeIva / 100.0), 2);
         SET @montoComision = ROUND(@montoTotalContrato * (@porcentajeComision / 100.0), 2);
       END
       ELSE
       BEGIN
-        SET @iva = 0;
         SET @montoComision = 0;
+        SET @porcentajeComision = 0;  -- <- CLAVE: para que el front no muestre comisión en siguientes facturas
       END
     END
 
@@ -171,7 +171,7 @@ BEGIN
 
     SET @idFactura = SCOPE_IDENTITY();
 
-    /* ===== Asociar automáticamente los clientes del contrato ===== */
+    /* ===== Asociar clientes del contrato ===== */
     INSERT INTO FacturaCliente (idFactura, identificacion)
     SELECT @idFactura, cc.identificacion
     FROM ClienteContrato cc
@@ -225,6 +225,8 @@ BEGIN
         p.ubicacion,
         CONCAT(a.nombre, ' ', a.apellido1) AS nombreAgente,
         f.porcentajeComision,
+        ISNULL(co.montoComision, 0) AS montoComisionAgente,
+         f.iva AS montoIva, 
         CONVERT(varchar(10), f.fechaEmision, 23) AS fechaEmision,
         CONVERT(varchar(10), f.fechaPago, 23) AS fechaPago,
         f.estadoPago,
@@ -256,6 +258,7 @@ BEGIN
     INNER JOIN Propiedad p ON p.idPropiedad = c.idPropiedad
     INNER JOIN TipoContrato tc ON tc.idTipoContrato = c.idTipoContrato
     INNER JOIN Agente a ON a.identificacion = f.idAgente
+    LEFT JOIN  Comision co ON co.idFactura = f.idFactura
     ORDER BY f.idFactura DESC;
 END;
 GO
@@ -282,6 +285,8 @@ BEGIN
         p.ubicacion,
         CONCAT(a.nombre, ' ', a.apellido1) AS nombreAgente,
         f.porcentajeComision,
+        ISNULL(co.montoComision, 0) AS montoComisionAgente,
+        f.iva AS montoIva, 
         CONVERT(varchar(10), f.fechaEmision, 23) AS fechaEmision,
         CONVERT(varchar(10), f.fechaPago, 23) AS fechaPago,
         f.estadoPago,
@@ -317,6 +322,7 @@ BEGIN
     LEFT JOIN Cliente cl ON fc.identificacion = cl.identificacion
     LEFT JOIN ClienteContrato cc ON cc.idContrato = c.idContrato AND cc.identificacion = cl.identificacion
     LEFT JOIN TipoRol tr ON tr.idRol = cc.idRol
+    LEFT JOIN Comision co ON co.idFactura = f.idFactura
     WHERE
         (@estadoPago IS NULL OR f.estadoPago = @estadoPago)
         AND (@idContrato IS NULL OR c.idContrato = @idContrato)
@@ -334,7 +340,7 @@ BEGIN
     GROUP BY 
         f.idFactura, tc.nombre, p.idPropiedad, p.ubicacion, a.nombre, a.apellido1,
         f.porcentajeComision, f.fechaEmision, f.fechaPago,
-        f.estadoPago, c.idContrato, f.montoPagado, f.porcentajeIva
+        f.estadoPago, c.idContrato, f.montoPagado, f.porcentajeIva, f.iva, co.montoComision
     ORDER BY f.idFactura DESC;
 END;
 GO
@@ -370,11 +376,12 @@ BEGIN
       @fechaPagoActual DATETIME,
       @totalPagado DECIMAL(18,2),
       @idEstadoVendida INT,
-      @idEstadoDisponible INT;
+      @idEstadoDisponible INT,
+      @numFacturasPreviasPendientes INT;
 
     /* ===== Obtener IDs de estado de propiedad ===== */
     SELECT @idEstadoVendida = idEstadoPropiedad FROM EstadoPropiedad WHERE nombre = 'vendida';
-    SELECT @idEstadoDisponible = idEstadoPropiedad FROM EstadoPropiedad WHERE nombre = 'disponible';
+    SELECT @idEstadoDisponible = idEstadoPropiedad FROM EstadoPropiedad WHERE nombre = 'en mantenimiento';
 
     IF @idEstadoVendida IS NULL OR @idEstadoDisponible IS NULL
       THROW 50008, 'No se encontraron los estados de propiedad requeridos (Vendido / Disponible).', 1;
@@ -402,6 +409,21 @@ BEGIN
     FROM Contrato c
     WHERE c.idContrato = @idContrato;
 
+    /* =======================================================
+       VALIDACIÓN: No permitir pagar facturas fuera de orden
+       ======================================================= */
+    IF @idTipoContrato != 1  -- Solo aplica para alquiler
+    BEGIN
+      SELECT @numFacturasPreviasPendientes = COUNT(*)
+      FROM Factura
+      WHERE idContrato = @idContrato
+        AND idFactura < @idFactura   -- facturas anteriores
+        AND estadoPago = 0;          -- no pagadas
+
+      IF @numFacturasPreviasPendientes > 0
+        THROW 50101, 'No se puede pagar esta factura hasta que las facturas anteriores estén pagadas.', 1;
+    END
+
     SET @fechaPagoActual = GETDATE();
 
     /* ===== Actualizar estado de factura ===== */
@@ -427,12 +449,12 @@ BEGIN
     END
     ELSE  -- ALQUILER
     BEGIN
-      -- Verificar cuántas facturas ya fueron pagadas
+      -- Ver cuántas facturas pagadas hay
       SELECT @facturasPagadas = COUNT(*)
       FROM Factura
       WHERE idContrato = @idContrato AND estadoPago = 1;
 
-      -- Solo si es la primera factura pagada se genera la comisión
+      -- Solo la primera factura genera comisión
       IF @facturasPagadas = 1
       BEGIN
         SET @montoComision = ROUND(@montoTotalContrato * (@porcentajeComision / 100.0), 2);
@@ -518,7 +540,6 @@ BEGIN
   END CATCH
 END;
 GO
-
 
 
 
@@ -724,3 +745,5 @@ BEGIN
     );
 END;
 GO
+
+¿

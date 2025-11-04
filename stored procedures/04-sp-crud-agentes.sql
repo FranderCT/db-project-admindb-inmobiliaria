@@ -235,10 +235,15 @@ BEGIN
       c.montoTotal,
       c.deposito,
       c.porcentajeComision,
+      cm.montoComision,
       c.estado
   FROM Contrato c
   INNER JOIN TipoContrato tc ON c.idTipoContrato = tc.idTipoContrato
   INNER JOIN Propiedad p ON c.idPropiedad = p.idPropiedad
+  LEFT JOIN Comision cm
+            ON cm.idContrato  = c.idContrato
+            AND cm.idAgente = @idAgente
+            AND cm.estado = 1
   WHERE c.idAgente = @idAgente
   ORDER BY c.fechaInicio DESC;
 END;
@@ -386,5 +391,3 @@ begin
 end
 go
 
-select * from Agente
-go
