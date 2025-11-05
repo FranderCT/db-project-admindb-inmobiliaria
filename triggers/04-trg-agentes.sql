@@ -1,3 +1,0 @@
--- TRIGGERS TABLA AGENTE
-
-
