@@ -61,7 +61,21 @@ BEGIN
             @montoTotal, @deposito, @porcentajeComision, @estado, @cantidadPagos
         );
 
-        SET @idContrato = SCOPE_IDENTITY();
+        -- IMPORTANTE: Como hay un trigger INSTEAD OF INSERT, SCOPE_IDENTITY() no funciona
+        -- Debemos obtener el idContrato del último registro insertado para este agente/propiedad
+        SELECT TOP 1 @idContrato = idContrato 
+        FROM Contrato 
+        WHERE idAgente = @idAgente 
+          AND idPropiedad = @idPropiedad
+          AND montoTotal = @montoTotal
+        ORDER BY idContrato DESC;
+
+        -- Verificar que se obtuvo el ID correctamente
+        IF @idContrato IS NULL
+        BEGIN
+            ROLLBACK TRANSACTION;
+            THROW 50001, 'No se pudo obtener el ID del contrato recién insertado.', 1;
+        END;
 
         -- Condiciones
         DECLARE @tmpCondiciones TABLE (texto NVARCHAR(255));
