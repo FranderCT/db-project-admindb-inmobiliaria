@@ -1,16 +1,23 @@
--- SCRIPT PARA VACIAR TODAS LAS TABLAS Y HACER INSERTS CORREGIDOS
+-- =====================================================
+-- SCRIPT DE INSERTS USANDO STORED PROCEDURES
+-- BD ALTOSDELVALLE - Usando SPs para garantizar validaciones
+-- =====================================================
+
 USE AltosDelValle;
 GO
 
--- =============================================
--- VACIAR TODAS LAS TABLAS (EN ORDEN CORRECTO)
--- =============================================
-
--- Deshabilitar restricciones de foreign key temporalmente
-EXEC sp_msforeachtable "ALTER TABLE ? NOCHECK CONSTRAINT ALL"
+PRINT '========================================';
+PRINT 'INICIANDO CARGA DE DATOS CON SPs';
+PRINT '========================================';
 GO
 
--- Vaciar todas las tablas en orden inverso de dependencias
+-- =====================================================
+-- PASO 1: LIMPIAR DATOS EXISTENTES (en orden inverso a FKs)
+-- =====================================================
+PRINT 'Paso 1/11: Limpiando datos existentes...';
+GO
+
+-- Tablas dependientes primero
 DELETE FROM Comision;
 DELETE FROM FacturaCliente;
 DELETE FROM Factura;
@@ -18,204 +25,439 @@ DELETE FROM ContratoTerminos;
 DELETE FROM ClienteContrato;
 DELETE FROM Contrato;
 DELETE FROM Propiedad;
-DELETE FROM Agente;
 DELETE FROM Cliente;
-DELETE FROM TipoInmueble;
-DELETE FROM EstadoPropiedad;
+DELETE FROM Agente;
+
+-- Tablas maestras
 DELETE FROM TerminosCondiciones;
 DELETE FROM TipoContrato;
 DELETE FROM TipoRol;
+DELETE FROM TipoInmueble;
+DELETE FROM EstadoPropiedad;
+GO
 
--- Reiniciar los contadores IDENTITY (solo las tablas que lo tienen)
+PRINT 'Paso 1/11: Datos limpiados exitosamente.';
+GO
+
+-- =====================================================
+-- PASO 2: REINICIAR IDENTITIES
+-- =====================================================
+PRINT 'Paso 2/11: Reiniciando identities...';
+GO
+
 DBCC CHECKIDENT ('TipoRol', RESEED, 0);
 DBCC CHECKIDENT ('TipoContrato', RESEED, 0);
 DBCC CHECKIDENT ('TerminosCondiciones', RESEED, 0);
 DBCC CHECKIDENT ('EstadoPropiedad', RESEED, 0);
 DBCC CHECKIDENT ('TipoInmueble', RESEED, 0);
-DBCC CHECKIDENT ('Contrato', RESEED, 0);
 DBCC CHECKIDENT ('ClienteContrato', RESEED, 0);
 DBCC CHECKIDENT ('ContratoTerminos', RESEED, 0);
-DBCC CHECKIDENT ('Factura', RESEED, 0);
 DBCC CHECKIDENT ('FacturaCliente', RESEED, 0);
 DBCC CHECKIDENT ('Comision', RESEED, 0);
-
--- Rehabilitar restricciones de foreign key
-EXEC sp_msforeachtable "ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL"
 GO
 
--- =============================================
--- INSERTS CORREGIDOS
--- =============================================
-
--- TIPO ROL (se inserta primero porque no tiene dependencias)
-INSERT INTO TipoRol (nombre)
-VALUES 
-('Propietario'),
-('Inquilino');
+PRINT 'Paso 2/11: Identities reiniciados.';
 GO
 
--- TIPO CONTRATO
-INSERT INTO TipoContrato (nombre)
-VALUES 
-('Venta'),
-('Alquiler');
+-- =====================================================
+-- PASO 3: INSERTAR DATOS MAESTROS (con SPs donde existan)
+-- =====================================================
+PRINT 'Paso 3/11: Insertando datos maestros...';
 GO
 
--- TERMINOS CONDICIONES
-INSERT INTO TerminosCondiciones (textoCondicion)
-VALUES 
-('Condiciones generales de venta'),
-('Condiciones de alquiler');
+-- TipoRol (no tiene SP, inserción directa)
+INSERT INTO TipoRol (nombre) VALUES 
+  ('Propietario'),
+  ('Comprador'),
+  ('Inquilino'),
+  ('Arrendatario');
+PRINT '  - TipoRol: 4 registros';
 GO
 
--- ESTADO PROPIEDAD
-INSERT INTO EstadoPropiedad (nombre)
-VALUES 
-('Disponible'),
-('Ocupada');
+-- TipoContrato (no tiene SP, inserción directa)
+-- IMPORTANTE: Los nombres deben coincidir con los que espera sp_insertFactura: 'Venta' y 'Alquiler'
+INSERT INTO TipoContrato (nombre) VALUES 
+  ('Venta'),
+  ('Alquiler'),
+  ('Alquiler Temporal');
+PRINT '  - TipoContrato: 3 registros';
 GO
 
--- TIPO INMUEBLE
-INSERT INTO TipoInmueble (nombre)
-VALUES 
-('Casa'),
-('Apartamento'),
-('Oficina');
+-- TerminosCondiciones (no tiene SP, inserción directa)
+INSERT INTO TerminosCondiciones (textoCondicion) VALUES 
+  ('El comprador acepta recibir la propiedad en el estado actual sin garantías adicionales.'),
+  ('El arrendatario se compromete a pagar mensualidades los primeros 5 días de cada mes.'),
+  ('Cualquier daño a la propiedad será responsabilidad del inquilino.'),
+  ('El contrato puede ser rescindido con 30 días de anticipación por escrito.'),
+  ('El depósito de garantía será devuelto dentro de 15 días tras la finalización del contrato.'),
+  ('Prohibido subarrendar sin consentimiento del propietario.');
+PRINT '  - TerminosCondiciones: 6 registros';
 GO
 
--- CLIENTE (debe ir antes que Agente y Propiedad porque son referenciados)
-INSERT INTO Cliente (identificacion, nombre, apellido1, apellido2, telefono, estado)
-VALUES 
-(12345678, 'Juan', 'Pérez', 'González', '8888-1234', 1),
-(23456789, 'Ana', 'Martínez', 'Lopez', '8888-5678', 1),
-(34567890, 'Luis', 'Fernández', 'Gutiérrez', '8888-2345', 1);
+-- EstadoPropiedad (usando SP)
+EXEC sp_insertEstadoPropiedad @nombre = 'Disponible';
+EXEC sp_insertEstadoPropiedad @nombre = 'Vendida';
+EXEC sp_insertEstadoPropiedad @nombre = 'Alquilada';
+EXEC sp_insertEstadoPropiedad @nombre = 'En Mantenimiento';
+EXEC sp_insertEstadoPropiedad @nombre = 'Reservada';
+PRINT '  - EstadoPropiedad: 5 registros (usando SP)';
 GO
 
--- AGENTE
-INSERT INTO Agente (identificacion, nombre, apellido1, apellido2, telefono, comisionAcumulada, estado)
-VALUES 
-(87654321, 'Carlos', 'Ramírez', 'Hernández', '8888-9999', 5000.00, 1),
-(76543210, 'Luis', 'González', 'Martínez', '8888-8888', 2000.00, 1),
-(65432109, 'Marta', 'Rodríguez', 'Jiménez', '8888-7777', 3000.00, 1);
+-- TipoInmueble (usando SP)
+EXEC sp_tipoInmuebleInsertar @nombre = 'Casa';
+EXEC sp_tipoInmuebleInsertar @nombre = 'Apartamento';
+EXEC sp_tipoInmuebleInsertar @nombre = 'Local Comercial';
+EXEC sp_tipoInmuebleInsertar @nombre = 'Terreno';
+EXEC sp_tipoInmuebleInsertar @nombre = 'Bodega';
+EXEC sp_tipoInmuebleInsertar @nombre = 'Oficina';
+PRINT '  - TipoInmueble: 6 registros (usando SP)';
 GO
 
--- PROPIEDAD (El trigger generará automáticamente los IDs tipo 20250001, 20250002, etc.)
--- NO especificamos idPropiedad, el trigger lo genera
-DECLARE @propiedad1 INT, @propiedad2 INT, @propiedad3 INT;
+PRINT 'Paso 3/11: Datos maestros insertados exitosamente.';
+GO
 
-INSERT INTO Propiedad (ubicacion, precio, idEstado, idTipoInmueble, identificacion)
-VALUES ('Calle Falsa 123, San José', 150000.00, 1, 1, 12345678);
+-- =====================================================
+-- PASO 4: INSERTAR CLIENTES (usando SP)
+-- =====================================================
+PRINT 'Paso 4/11: Insertando clientes...';
+GO
 
--- Obtener el ID generado por el trigger
-SELECT @propiedad1 = MAX(idPropiedad) FROM Propiedad WHERE identificacion = 12345678;
-PRINT 'Propiedad 1 ID: ' + CAST(@propiedad1 AS VARCHAR(10));
+EXEC dbo.sp_insertCliente @identificacion = 504440503, @nombre = 'Juan', @apellido1 = 'Pérez', @apellido2 = 'González', @telefono = 88776655;
+EXEC dbo.sp_insertCliente @identificacion = 604550604, @nombre = 'María', @apellido1 = 'Rodríguez', @apellido2 = 'López', @telefono = 87654321;
+EXEC dbo.sp_insertCliente @identificacion = 703660705, @nombre = 'Carlos', @apellido1 = 'Jiménez', @apellido2 = NULL, @telefono = 89012345;
+EXEC dbo.sp_insertCliente @identificacion = 802770806, @nombre = 'Ana', @apellido1 = 'Martínez', @apellido2 = 'Castro', @telefono = 86543210;
+EXEC dbo.sp_insertCliente @identificacion = 901880907, @nombre = 'Luis', @apellido1 = 'Hernández', @apellido2 = 'Mora', @telefono = 85432109;
+EXEC dbo.sp_insertCliente @identificacion = 102990108, @nombre = 'Sofía', @apellido1 = 'Vargas', @apellido2 = 'Ramírez', @telefono = 84321098;
+EXEC dbo.sp_insertCliente @identificacion = 203101209, @nombre = 'Diego', @apellido1 = 'Sánchez', @apellido2 = NULL, @telefono = 83210987;
+EXEC dbo.sp_insertCliente @identificacion = 304211310, @nombre = 'Laura', @apellido1 = 'Gómez', @apellido2 = 'Solano', @telefono = 82109876;
+GO
 
-INSERT INTO Propiedad (ubicacion, precio, idEstado, idTipoInmueble, identificacion)
-VALUES ('Avenida Central 456, Alajuela', 120000.00, 1, 2, 23456789);
+PRINT 'Paso 4/11: 8 clientes insertados (usando SP).';
+GO
 
-SELECT @propiedad2 = MAX(idPropiedad) FROM Propiedad WHERE identificacion = 23456789;
-PRINT 'Propiedad 2 ID: ' + CAST(@propiedad2 AS VARCHAR(10));
+-- =====================================================
+-- PASO 5: INSERTAR AGENTES (usando SP)
+-- =====================================================
+PRINT 'Paso 5/11: Insertando agentes...';
+GO
 
-INSERT INTO Propiedad (ubicacion, precio, idEstado, idTipoInmueble, identificacion)
-VALUES ('Calle Real 789, Heredia', 200000.00, 2, 3, 34567890);
+EXEC dbo.sp_insertAgente @identificacion = 111222333, @nombre = 'Roberto', @apellido1 = 'Alvarado', @apellido2 = 'Ruiz', @telefono = 70001111;
+EXEC dbo.sp_insertAgente @identificacion = 222333444, @nombre = 'Patricia', @apellido1 = 'Morales', @apellido2 = 'Vega', @telefono = 70002222;
+EXEC dbo.sp_insertAgente @identificacion = 333444555, @nombre = 'Fernando', @apellido1 = 'Castro', @apellido2 = NULL, @telefono = 70003333;
+GO
 
-SELECT @propiedad3 = MAX(idPropiedad) FROM Propiedad WHERE identificacion = 34567890;
-PRINT 'Propiedad 3 ID: ' + CAST(@propiedad3 AS VARCHAR(10));
+PRINT 'Paso 5/11: 3 agentes insertados (usando SP).';
+GO
 
--- Verificar que las propiedades se insertaron correctamente
-IF @propiedad1 IS NULL OR @propiedad2 IS NULL OR @propiedad3 IS NULL
+-- =====================================================
+-- PASO 6: INSERTAR PROPIEDADES (usando SP)
+-- =====================================================
+PRINT 'Paso 6/11: Insertando propiedades...';
+GO
+
+-- Nota: sp_insertPropiedad usa el trigger trg_GenerarCodigoPropiedad que genera idPropiedad automáticamente
+
+EXEC sp_insertPropiedad 
+  @ubicacion = 'Av. Central 123, San José', 
+  @precio = 185000.00, 
+  @idEstado = 1, 
+  @idTipoInmueble = 1, 
+  @identificacion = 504440503, 
+  @imagenUrl = 'https://ejemplo.com/casa1.jpg', 
+  @cantHabitaciones = 3, 
+  @cantBannios = 2, 
+  @areaM2 = 120.5, 
+  @amueblado = 0;
+  
+EXEC sp_insertPropiedad 
+  @ubicacion = 'Calle Los Laureles 45, Heredia', 
+  @precio = 95000.00, 
+  @idEstado = 1, 
+  @idTipoInmueble = 2, 
+  @identificacion = 504440503, 
+  @imagenUrl = 'https://ejemplo.com/apto1.jpg', 
+  @cantHabitaciones = 2, 
+  @cantBannios = 1, 
+  @areaM2 = 75.0, 
+  @amueblado = 1;
+
+EXEC sp_insertPropiedad 
+  @ubicacion = 'Boulevard del Este 789, Cartago', 
+  @precio = 250000.00, 
+  @idEstado = 1, 
+  @idTipoInmueble = 1, 
+  @identificacion = 604550604, 
+  @imagenUrl = 'https://ejemplo.com/casa2.jpg', 
+  @cantHabitaciones = 4, 
+  @cantBannios = 3, 
+  @areaM2 = 200.0, 
+  @amueblado = 0;
+
+EXEC sp_insertPropiedad 
+  @ubicacion = 'Centro Comercial Plaza 56, Alajuela', 
+  @precio = 120000.00, 
+  @idEstado = 1, 
+  @idTipoInmueble = 3, 
+  @identificacion = 703660705, 
+  @imagenUrl = NULL, 
+  @cantHabitaciones = 1, 
+  @cantBannios = 1, 
+  @areaM2 = 80.0, 
+  @amueblado = 0;
+
+EXEC sp_insertPropiedad 
+  @ubicacion = 'Residencial Los Pinos 22, Escazú', 
+  @precio = 340000.00, 
+  @idEstado = 2, 
+  @idTipoInmueble = 1, 
+  @identificacion = 802770806, 
+  @imagenUrl = 'https://ejemplo.com/casa3.jpg', 
+  @cantHabitaciones = 5, 
+  @cantBannios = 4, 
+  @areaM2 = 280.0, 
+  @amueblado = 1;
+
+EXEC sp_insertPropiedad 
+  @ubicacion = 'Av. Segunda 101, San Pedro', 
+  @precio = 65000.00, 
+  @idEstado = 1, 
+  @idTipoInmueble = 2, 
+  @identificacion = 901880907, 
+  @imagenUrl = NULL, 
+  @cantHabitaciones = 2, 
+  @cantBannios = 1, 
+  @areaM2 = 60.0, 
+  @amueblado = 1;
+
+EXEC sp_insertPropiedad 
+  @ubicacion = 'Parque Industrial Norte lote 7', 
+  @precio = 180000.00, 
+  @idEstado = 1, 
+  @idTipoInmueble = 5, 
+  @identificacion = 102990108, 
+  @imagenUrl = NULL, 
+  @cantHabitaciones = 1, 
+  @cantBannios = 2, 
+  @areaM2 = 150.0, 
+  @amueblado = 0;
+
+EXEC sp_insertPropiedad 
+  @ubicacion = 'Edificio Empresarial piso 3 of 12', 
+  @precio = 88000.00, 
+  @idEstado = 1, 
+  @idTipoInmueble = 6, 
+  @identificacion = 203101209, 
+  @imagenUrl = 'https://ejemplo.com/oficina1.jpg', 
+  @cantHabitaciones = 1, 
+  @cantBannios = 1, 
+  @areaM2 = 45.0, 
+  @amueblado = 1;
+GO
+
+PRINT 'Paso 6/11: 8 propiedades insertadas (usando SP).';
+GO
+
+-- =====================================================
+-- PASO 7: INSERTAR CONTRATOS (usando SP con condiciones)
+-- =====================================================
+PRINT 'Paso 7/11: Insertando contratos...';
+GO
+
+-- Contrato 1: Venta de casa (idTipoContrato=1 es 'Venta')
+DECLARE @idContrato1 INT;
+EXEC sp_insertContratoConNuevasCondiciones
+  @fechaInicio = '2025-01-15',
+  @fechaFin = '2025-02-15',
+  @fechaFirma = '2025-01-15',
+  @fechaPago = '2025-01-20',
+  @idTipoContrato = 1,
+  @idPropiedad = 20250001,
+  @idAgente = 111222333,
+  @montoTotal = 185000.00,
+  @deposito = 18500.00,
+  @porcentajeComision = 3.50,
+  @estado = 'Activo',
+  @cantidadPagos = 1,
+  @condiciones = '["Propiedad en estado actual sin garantías", "Rescisión con 30 días de anticipación"]';
+GO
+
+-- Contrato 2: Alquiler de apartamento (idTipoContrato=2 es 'Alquiler')
+DECLARE @idContrato2 INT;
+EXEC sp_insertContratoConNuevasCondiciones
+  @fechaInicio = '2025-02-01',
+  @fechaFin = '2026-02-01',
+  @fechaFirma = '2025-02-01',
+  @fechaPago = '2025-02-05',
+  @idTipoContrato = 2,
+  @idPropiedad = 20250002,
+  @idAgente = 222333444,
+  @montoTotal = 7200.00,
+  @deposito = 1200.00,
+  @porcentajeComision = 10.00,
+  @estado = 'Activo',
+  @cantidadPagos = 12,
+  @condiciones = '["Pago mensual primeros 5 días", "Responsabilidad por daños", "Devolución depósito en 15 días", "Prohibido subarrendar"]';
+GO
+
+-- Contrato 3: Venta de casa grande (idTipoContrato=1 es 'Venta')
+DECLARE @idContrato3 INT;
+EXEC sp_insertContratoConNuevasCondiciones
+  @fechaInicio = '2025-03-10',
+  @fechaFin = '2025-04-10',
+  @fechaFirma = '2025-03-10',
+  @fechaPago = '2025-03-15',
+  @idTipoContrato = 1,
+  @idPropiedad = 20250003,
+  @idAgente = 111222333,
+  @montoTotal = 250000.00,
+  @deposito = 25000.00,
+  @porcentajeComision = 4.00,
+  @estado = 'Pendiente',
+  @cantidadPagos = 1,
+  @condiciones = '["Propiedad vendida tal como se encuentra"]';
+GO
+
+PRINT 'Paso 7/11: 3 contratos insertados (usando SP con condiciones).';
+GO
+
+-- =====================================================
+-- PASO 8: VINCULAR CLIENTES A CONTRATOS (usando SP)
+-- =====================================================
+PRINT 'Paso 8/11: Vinculando clientes a contratos...';
+GO
+
+-- IMPORTANTE: El trigger trg_GenerarCodigoContrato usa GETDATE() (fecha actual del servidor)
+-- no las fechas del contrato. Por lo tanto, los IDs serán basados en HOY (05 nov 2025).
+-- Formato: YYYYMMDDXX donde XX es el consecutivo
+-- Hoy es 05-nov-2025, entonces: 2025110501, 2025110502, 2025110503
+
+-- Obtener los IDs de contratos reales generados
+DECLARE @idContrato1 INT, @idContrato2 INT, @idContrato3 INT;
+
+SELECT @idContrato1 = MIN(idContrato) FROM Contrato;
+SELECT @idContrato2 = MIN(idContrato) FROM Contrato WHERE idContrato > @idContrato1;
+SELECT @idContrato3 = MAX(idContrato) FROM Contrato;
+
+-- Contrato 1 (Compra-venta): Juan es propietario, María es compradora
+IF @idContrato1 IS NOT NULL
 BEGIN
-    PRINT 'ERROR: No se pudieron insertar las propiedades correctamente';
-    PRINT 'Propiedad1: ' + CAST(ISNULL(@propiedad1, -1) AS VARCHAR(10));
-    PRINT 'Propiedad2: ' + CAST(ISNULL(@propiedad2, -1) AS VARCHAR(10));
-    PRINT 'Propiedad3: ' + CAST(ISNULL(@propiedad3, -1) AS VARCHAR(10));
-    RETURN;
+  EXEC sp_insertClientesContrato @identificacion = 504440503, @idRol = 1, @idContrato = @idContrato1; -- Juan vende
+  EXEC sp_insertClientesContrato @identificacion = 604550604, @idRol = 2, @idContrato = @idContrato1; -- María compra
 END
 
-PRINT 'Propiedades insertadas correctamente con IDs generados por trigger.';
+-- Contrato 2 (Arrendamiento): Juan es propietario, Carlos es inquilino
+IF @idContrato2 IS NOT NULL
+BEGIN
+  EXEC sp_insertClientesContrato @identificacion = 504440503, @idRol = 1, @idContrato = @idContrato2; -- Juan es propietario
+  EXEC sp_insertClientesContrato @identificacion = 703660705, @idRol = 3, @idContrato = @idContrato2; -- Carlos es inquilino
+END
 
--- CONTRATO (usar los IDs capturados de Propiedad)
-DECLARE @contrato1 INT, @contrato2 INT, @contrato3 INT;
-
-INSERT INTO Contrato (fechaInicio, fechaFin, fechaFirma, fechaPago, idTipoContrato, idPropiedad, idAgente, montoTotal, deposito, porcentajeComision, cantidadPagos, estado)
-VALUES ('2025-09-01', '2026-08-31', '2025-09-02', '2025-09-05', 1, @propiedad1, 87654321, 150000.00, 10000.00, 5.00, 12, 'Pendiente');
-SET @contrato1 = SCOPE_IDENTITY();
-PRINT 'Contrato 1 ID: ' + CAST(@contrato1 AS VARCHAR(10));
-
-INSERT INTO Contrato (fechaInicio, fechaFin, fechaFirma, fechaPago, idTipoContrato, idPropiedad, idAgente, montoTotal, deposito, porcentajeComision, cantidadPagos, estado)
-VALUES ('2025-10-01', '2026-09-30', '2025-10-02', '2025-10-05', 2, @propiedad2, 76543210, 120000.00, 8000.00, 4.50, 12, 'Pendiente');
-SET @contrato2 = SCOPE_IDENTITY();
-PRINT 'Contrato 2 ID: ' + CAST(@contrato2 AS VARCHAR(10));
-
-INSERT INTO Contrato (fechaInicio, fechaFin, fechaFirma, fechaPago, idTipoContrato, idPropiedad, idAgente, montoTotal, deposito, porcentajeComision, cantidadPagos, estado)
-VALUES ('2025-10-15', '2026-10-14', '2025-10-16', '2025-10-20', 1, @propiedad3, 65432109, 200000.00, 12000.00, 6.00, 12, 'Pendiente');
-SET @contrato3 = SCOPE_IDENTITY();
-PRINT 'Contrato 3 ID: ' + CAST(@contrato3 AS VARCHAR(10));
-
--- CLIENTE CONTRATO
-INSERT INTO ClienteContrato (identificacion, idRol, idContrato)
-VALUES 
-(12345678, 1, @contrato1),  -- Juan es Propietario del contrato 1
-(23456789, 2, @contrato2),  -- Ana es Inquilino del contrato 2
-(34567890, 1, @contrato3);  -- Luis es Propietario del contrato 3
-
-PRINT 'ClienteContrato insertados correctamente.';
-
--- CONTRATO TERMINOS
-INSERT INTO ContratoTerminos (idCondicion, idContrato)
-VALUES 
-(1, @contrato1),  -- Condiciones de venta para contrato 1
-(2, @contrato2),  -- Condiciones de alquiler para contrato 2
-(1, @contrato3);  -- Condiciones de venta para contrato 3
-
-PRINT 'ContratoTerminos insertados correctamente.';
-
--- FACTURA
-DECLARE @factura1 INT, @factura2 INT, @factura3 INT;
-
-INSERT INTO Factura (montoPagado, fechaEmision, fechaPago, estadoPago, porcentajeIva, iva, idContrato, idAgente, idPropiedad, idTipoContrato, montoComision, porcentajeComision)
-VALUES (10000.00, '2025-09-10', '2025-09-15', 1, 13.00, 1300.00, @contrato1, 87654321, @propiedad1, 1, 5000.00, 5.00);
-SET @factura1 = SCOPE_IDENTITY();
-PRINT 'Factura 1 ID: ' + CAST(@factura1 AS VARCHAR(10));
-
-INSERT INTO Factura (montoPagado, fechaEmision, fechaPago, estadoPago, porcentajeIva, iva, idContrato, idAgente, idPropiedad, idTipoContrato, montoComision, porcentajeComision)
-VALUES (8000.00, '2025-10-10', '2025-10-15', 1, 13.00, 1040.00, @contrato2, 76543210, @propiedad2, 2, 4000.00, 4.50);
-SET @factura2 = SCOPE_IDENTITY();
-PRINT 'Factura 2 ID: ' + CAST(@factura2 AS VARCHAR(10));
-
-INSERT INTO Factura (montoPagado, fechaEmision, fechaPago, estadoPago, porcentajeIva, iva, idContrato, idAgente, idPropiedad, idTipoContrato, montoComision, porcentajeComision)
-VALUES (12000.00, '2025-10-20', '2025-10-25', 1, 13.00, 1560.00, @contrato3, 65432109, @propiedad3, 1, 6000.00, 6.00);
-SET @factura3 = SCOPE_IDENTITY();
-PRINT 'Factura 3 ID: ' + CAST(@factura3 AS VARCHAR(10));
-
--- FACTURA CLIENTE
-INSERT INTO FacturaCliente (identificacion, idFactura)
-VALUES 
-(12345678, @factura1),  -- Juan vinculado a factura 1
-(23456789, @factura2),  -- Ana vinculada a factura 2
-(34567890, @factura3);  -- Luis vinculado a factura 3
-
-PRINT 'FacturaCliente insertados correctamente.';
-
--- COMISION
-INSERT INTO Comision (idAgente, idFactura, idContrato, fechaComision, montoComision, porcentajeComision, estado)
-VALUES 
-(87654321, @factura1, @contrato1, '2025-09-10', 5000.00, 5.00, 1),
-(76543210, @factura2, @contrato2, '2025-10-10', 4000.00, 4.50, 1),
-(65432109, @factura3, @contrato3, '2025-10-20', 6000.00, 6.00, 1);
-
-PRINT 'Comisiones insertadas correctamente.';
+-- Contrato 3 (Compra-venta): María es propietaria, Ana es compradora
+IF @idContrato3 IS NOT NULL
+BEGIN
+  EXEC sp_insertClientesContrato @identificacion = 604550604, @idRol = 1, @idContrato = @idContrato3; -- María vende
+  EXEC sp_insertClientesContrato @identificacion = 802770806, @idRol = 2, @idContrato = @idContrato3; -- Ana compra
+END
 GO
 
--- =============================================
+PRINT 'Paso 8/11: 6 relaciones cliente-contrato insertadas (usando SP).';
+GO
+
+-- =====================================================
+-- PASO 9: CONTRATOTERMINOS (Ya manejado por el SP)
+-- =====================================================
+-- NOTA: El SP sp_insertContratoConNuevasCondiciones ya creó los términos
+-- a partir del parámetro JSON @condiciones. No es necesario insertar manualmente.
+PRINT 'Paso 9/11: Términos de contratos ya insertados por SP.';
+GO
+
+
+-- =====================================================
+-- PASO 10: INSERTAR FACTURAS (usando SP)
+-- =====================================================
+PRINT 'Paso 10/11: Insertando facturas...';
+GO
+
+-- Nota: El SP sp_insertFactura calcula automáticamente todos los montos,
+-- IVA, comisiones, y actualiza el estado de la propiedad según el tipo de contrato.
+-- El trigger trg_GenerarCodigoFactura genera el idFactura y crea registros en FacturaCliente.
+
+-- Obtener los IDs de contratos generados dinámicamente
+DECLARE @idContrato1 INT, @idContrato2 INT, @idContrato3 INT;
+SELECT @idContrato1 = MIN(idContrato) FROM Contrato;
+SELECT @idContrato2 = MIN(idContrato) FROM Contrato WHERE idContrato > @idContrato1;
+SELECT @idContrato3 = MAX(idContrato) FROM Contrato;
+
+-- Factura para contrato 1 (Compra-venta)
+DECLARE @idFactura1 BIGINT;
+IF @idContrato1 IS NOT NULL
+BEGIN
+  EXEC sp_insertFactura 
+    @idContrato = @idContrato1,
+    @porcentajeIva = 13.00,
+    @idFactura = @idFactura1 OUTPUT;
+  PRINT 'Factura 1 generada con ID: ' + CAST(@idFactura1 AS VARCHAR);
+END
+
+-- Factura 1 para contrato 2 (Arrendamiento - primera mensualidad)
+DECLARE @idFactura2 BIGINT;
+IF @idContrato2 IS NOT NULL
+BEGIN
+  EXEC sp_insertFactura 
+    @idContrato = @idContrato2,
+    @porcentajeIva = 13.00,
+    @idFactura = @idFactura2 OUTPUT;
+  PRINT 'Factura 2 generada con ID: ' + CAST(@idFactura2 AS VARCHAR);
+END
+
+-- Factura 2 para contrato 2 (Arrendamiento - segunda mensualidad)
+DECLARE @idFactura3 BIGINT;
+IF @idContrato2 IS NOT NULL
+BEGIN
+  EXEC sp_insertFactura 
+    @idContrato = @idContrato2,
+    @porcentajeIva = 13.00,
+    @idFactura = @idFactura3 OUTPUT;
+  PRINT 'Factura 3 generada con ID: ' + CAST(@idFactura3 AS VARCHAR);
+END
+
+-- Factura para contrato 3 (Compra-venta)
+DECLARE @idFactura4 BIGINT;
+IF @idContrato3 IS NOT NULL
+BEGIN
+  EXEC sp_insertFactura 
+    @idContrato = @idContrato3,
+    @porcentajeIva = 13.00,
+    @idFactura = @idFactura4 OUTPUT;
+  PRINT 'Factura 4 generada con ID: ' + CAST(@idFactura4 AS VARCHAR);
+END
+GO
+
+PRINT 'Paso 10/11: Facturas insertadas correctamente (usando SP).';
+GO
+
+-- =====================================================
+-- PASO 11: COMISIONES (Creadas automáticamente)
+-- =====================================================
+-- NOTA: Las comisiones deben crearse automáticamente al momento del pago.
+-- Para este script de inserción inicial, las comisiones se registran
+-- manualmente solo cuando las facturas tienen montoComision > 0.
+-- En producción, esto debería manejarse con un trigger o SP al pagar facturas.
+PRINT 'Paso 11/11: Comisiones calculadas en facturas (pending trigger/SP for auto-insert).';
+GO
+
+
+
+-- =====================================================
 -- VERIFICACIÓN DE DATOS INSERTADOS
--- =============================================
-
+-- =====================================================
+PRINT '';
 PRINT '========================================';
-PRINT 'VERIFICACIÓN DE DATOS INSERTADOS';
+PRINT 'RESUMEN DE DATOS INSERTADOS:';
 PRINT '========================================';
+GO
 
-SELECT 'TipoRol' as Tabla, COUNT(*) as Registros FROM TipoRol
+SELECT 'TipoRol' AS Tabla, COUNT(*) AS Registros FROM TipoRol
 UNION ALL
 SELECT 'TipoContrato', COUNT(*) FROM TipoContrato
 UNION ALL
@@ -241,43 +483,27 @@ SELECT 'Factura', COUNT(*) FROM Factura
 UNION ALL
 SELECT 'FacturaCliente', COUNT(*) FROM FacturaCliente
 UNION ALL
-SELECT 'Comision', COUNT(*) FROM Comision;
-
-PRINT '';
-PRINT 'CONTRATOS CREADOS:';
-SELECT 
-    idContrato, 
-    FORMAT(fechaInicio, 'dd/MM/yyyy') as FechaInicio,
-    idTipoContrato, 
-    idPropiedad, 
-    idAgente, 
-    FORMAT(montoTotal, 'C', 'es-CR') as MontoTotal,
-    estado 
-FROM Contrato;
-
-PRINT '';
-PRINT 'PROPIEDADES (con IDs generados por trigger):';
-SELECT 
-    idPropiedad, 
-    ubicacion, 
-    FORMAT(precio, 'C', 'es-CR') as Precio,
-    idEstado, 
-    idTipoInmueble, 
-    identificacion 
-FROM Propiedad;
-
-PRINT '';
-PRINT 'FACTURAS:';
-SELECT 
-    idFactura, 
-    FORMAT(montoPagado, 'C', 'es-CR') as MontoPagado,
-    FORMAT(fechaEmision, 'dd/MM/yyyy') as FechaEmision,
-    CASE WHEN estadoPago = 1 THEN 'Pagado' ELSE 'Pendiente' END as EstadoPago,
-    idContrato, 
-    idAgente, 
-    idPropiedad 
-FROM Factura;
+SELECT 'Comision', COUNT(*) FROM Comision
+ORDER BY Tabla;
 GO
 
+PRINT '';
+PRINT '========================================';
+PRINT 'Agentes registrados:';
+PRINT '========================================';
+GO
 
+SELECT 
+  identificacion,
+  nombre + ' ' + apellido1 AS nombreCompleto,
+  telefono,
+  estado
+FROM Agente
+ORDER BY identificacion;
+GO
 
+PRINT '';
+PRINT '========================================';
+PRINT 'Script de inserts completado exitosamente!';
+PRINT '========================================';
+GO
