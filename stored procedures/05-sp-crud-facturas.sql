@@ -1,4 +1,4 @@
-USE AltosDelValle;
+ï»¿USE AltosDelValle;
 GO
 CREATE OR ALTER PROCEDURE dbo.sp_insertFactura
   @idContrato     INT,
@@ -28,14 +28,13 @@ BEGIN
       @idEstadoVendida      INT,
       @idEstadoReservada    INT;
 
-    /* ===== Estados requeridos ===== */
-    SELECT @idEstadoVendida = idEstadoPropiedad FROM EstadoPropiedad WHERE nombre = 'vendida';
-    SELECT @idEstadoReservada = idEstadoPropiedad FROM EstadoPropiedad WHERE nombre = 'reservada';
-
+    -- Estados requeridos
+    SELECT @idEstadoVendida  = idEstadoPropiedad FROM EstadoPropiedad WHERE nombre = 'vendida';
+    SELECT @idEstadoReservada= idEstadoPropiedad FROM EstadoPropiedad WHERE nombre = 'reservada';
     IF @idEstadoVendida IS NULL OR @idEstadoReservada IS NULL
       THROW 50008, 'No se encontraron los estados de propiedad requeridos (Vendido / Reservado).', 1;
 
-    /* ===== Validaciones base y lectura del contrato ===== */
+    -- Validaciones base
     IF NOT EXISTS (SELECT 1 FROM Contrato WHERE idContrato = @idContrato)
       THROW 50009, 'El contrato indicado no existe.', 1;
 
@@ -51,23 +50,17 @@ BEGIN
     WHERE idContrato = @idContrato;
 
     IF @montoTotalContrato IS NULL OR @montoTotalContrato <= 0
-      THROW 50010, 'El contrato no tiene un monto total válido.', 1;
-
+      THROW 50010, 'El contrato no tiene un monto total vÃ¡lido.', 1;
     IF @porcentajeComision IS NULL OR @porcentajeComision < 0 OR @porcentajeComision > 100
-      THROW 50011, 'El contrato no tiene un porcentaje de comisión válido.', 1;
-
+      THROW 50011, 'El contrato no tiene un porcentaje de comisiÃ³n vÃ¡lido.', 1;
     IF @porcentajeIva IS NULL OR @porcentajeIva < 0 OR @porcentajeIva > 100
       THROW 50012, 'El porcentaje de IVA debe estar entre 0 y 100.', 1;
-
     IF @idPropiedad IS NULL OR @idTipoContrato IS NULL
       THROW 50013, 'El contrato no tiene propiedad o tipo de contrato asignado.', 1;
-
     IF @idAgente IS NULL
       THROW 50014, 'El contrato no tiene un agente asignado.', 1;
-
     IF NOT EXISTS (SELECT 1 FROM Agente WHERE identificacion = @idAgente)
       THROW 50014, 'El agente no existe.', 1;
-
     IF NOT EXISTS (SELECT 1 FROM ClienteContrato WHERE idContrato = @idContrato)
       THROW 50015, 'El contrato no tiene clientes asociados. No se puede emitir una factura.', 1;
 
@@ -75,28 +68,27 @@ BEGIN
     FROM TipoContrato
     WHERE idTipoContrato = @idTipoContrato;
 
-    /* ===== Reglas por tipo de contrato ===== */
+    -- Reglas por tipo de contrato
     IF @nombreTipoContrato = 'Venta'
     BEGIN
       IF EXISTS (SELECT 1 FROM Factura WHERE idContrato = @idContrato)
-        THROW 50017, 'No se pueden crear múltiples facturas para contratos de tipo Venta.', 1;
+        THROW 50017, 'No se pueden crear mÃºltiples facturas para contratos de tipo Venta.', 1;
 
       SET @montoFactura = @montoTotalContrato;
 
-      UPDATE Contrato
-      SET estado = 'Finalizado', fechaPago = GETDATE()
+      UPDATE Contrato SET estado = 'Finalizado', fechaPago = GETDATE()
       WHERE idContrato = @idContrato;
 
-      UPDATE Propiedad
-      SET idEstado = @idEstadoVendida
+      UPDATE Propiedad SET idEstado = @idEstadoVendida
       WHERE idPropiedad = @idPropiedad;
     END
     ELSE IF @nombreTipoContrato = 'Alquiler'
     BEGIN
       IF @cantidadPagos IS NULL OR @cantidadPagos <= 0
-        THROW 50019, 'El contrato de alquiler no tiene una cantidad de pagos válida.', 1;
+        THROW 50019, 'El contrato de alquiler no tiene una cantidad de pagos vÃ¡lida.', 1;
 
-      IF @fechaPagoContrato IS NOT NULL AND CONVERT(date, GETDATE()) < CONVERT(date, @fechaPagoContrato)
+      IF @fechaPagoContrato IS NOT NULL 
+         AND CONVERT(date, GETDATE()) < CONVERT(date, @fechaPagoContrato)
         THROW 50025, 'No puede crear una factura antes de la fecha de pago establecida en el contrato.', 1;
 
       SELECT 
@@ -108,6 +100,15 @@ BEGIN
       IF @facturasEmitidas >= @cantidadPagos
         THROW 50020, 'Ya se han generado todas las facturas correspondientes a este contrato de alquiler.', 1;
 
+      -- ðŸš« NUEVA REGLA: no generar una nueva si existe alguna pendiente
+      IF EXISTS (
+        SELECT 1 
+        FROM Factura 
+        WHERE idContrato = @idContrato
+          AND estadoPago = 0            -- pendiente
+      )
+        THROW 50026, 'Hay una factura previa pendiente de pago. Debe pagarla antes de generar la siguiente.', 1;
+
       DECLARE @cuota DECIMAL(18,2) = ROUND(@montoTotalContrato / @cantidadPagos, 2);
 
       IF @facturasEmitidas = (@cantidadPagos - 1)
@@ -116,35 +117,29 @@ BEGIN
         SET @montoFactura = @cuota;
 
       IF @montoFactura <= 0
-        THROW 50021, 'El monto calculado para la factura de alquiler no es válido.', 1;
+        THROW 50021, 'El monto calculado para la factura de alquiler no es vÃ¡lido.', 1;
 
       IF @facturasEmitidas = 0
       BEGIN
-        UPDATE Contrato
-        SET estado = 'Activo'
+        UPDATE Contrato SET estado = 'Activo'
         WHERE idContrato = @idContrato;
       END
 
-      UPDATE Propiedad
-      SET idEstado = @idEstadoReservada
+      UPDATE Propiedad SET idEstado = @idEstadoReservada
       WHERE idPropiedad = @idPropiedad;
     END
     ELSE
       THROW 50022, 'Tipo de contrato desconocido.', 1;
 
-    /* ===== Cálculos coherentes ===== */
+    -- CÃ¡lculos coherentes
     SET @iva = ROUND(@montoFactura * (@porcentajeIva / 100.0), 2);
 
     IF @nombreTipoContrato = 'Venta'
-    BEGIN
       SET @montoComision = ROUND(@montoTotalContrato * (@porcentajeComision / 100.0), 2);
-    END
     ELSE
     BEGIN
       IF @facturasEmitidas = 0
-      BEGIN
         SET @montoComision = ROUND(@montoTotalContrato * (@porcentajeComision / 100.0), 2);
-      END
       ELSE
       BEGIN
         SET @montoComision = 0;
@@ -152,19 +147,19 @@ BEGIN
       END
     END
 
-    /* ===== Insert de factura ===== */
+    -- Insert de factura (el trigger genera idFactura y pobla FacturaCliente)
     INSERT INTO Factura (
-        montoPagado, fechaEmision, fechaPago, estadoPago,
-        iva, porcentajeIva, idContrato, idAgente,
-        idPropiedad, idTipoContrato, montoComision, porcentajeComision
+      montoPagado, fechaEmision, fechaPago, estadoPago,
+      iva, porcentajeIva, idContrato, idAgente,
+      idPropiedad, idTipoContrato, montoComision, porcentajeComision
     )
     VALUES (
-        @montoFactura, DEFAULT, NULL, 0,
-        @iva, @porcentajeIva, @idContrato, @idAgente,
-        @idPropiedad, @idTipoContrato, @montoComision, @porcentajeComision
+      @montoFactura, DEFAULT, NULL, 0,
+      @iva, @porcentajeIva, @idContrato, @idAgente,
+      @idPropiedad, @idTipoContrato, @montoComision, @porcentajeComision
     );
 
-    /* ===== Recuperar idFactura generado por el trigger ===== */
+    -- Recuperar idFactura generado por el trigger
     SELECT TOP 1 @idFactura = idFactura
     FROM Factura
     WHERE idContrato = @idContrato
@@ -385,7 +380,7 @@ BEGIN
     WHERE c.idContrato = @idContrato;
 
     /* =======================================================
-       VALIDACIÓN: No permitir pagar facturas fuera de orden
+       VALIDACIÃ“N: No permitir pagar facturas fuera de orden
        ======================================================= */
     IF @idTipoContrato != 1  -- Solo aplica para alquiler
     BEGIN
@@ -396,7 +391,7 @@ BEGIN
         AND estadoPago = 0;          -- no pagadas
 
       IF @numFacturasPreviasPendientes > 0
-        THROW 50101, 'No se puede pagar esta factura hasta que las facturas anteriores estén pagadas.', 1;
+        THROW 50101, 'No se puede pagar esta factura hasta que las facturas anteriores estÃ©n pagadas.', 1;
     END
 
     SET @fechaPagoActual = GETDATE();
@@ -408,11 +403,11 @@ BEGIN
     WHERE idFactura = @idFactura;
 
     /* =====================================================
-       CALCULAR E INSERTAR COMISIÓN SEGÚN TIPO DE CONTRATO
+       CALCULAR E INSERTAR COMISIÃ“N SEGÃšN TIPO DE CONTRATO
        ===================================================== */
     IF @idTipoContrato = 1  -- VENTA
     BEGIN
-      -- Comisión sobre el monto total del contrato (solo una factura por venta)
+      -- ComisiÃ³n sobre el monto total del contrato (solo una factura por venta)
       SET @montoComision = ROUND(@montoTotalContrato * (@porcentajeComision / 100.0), 2);
 
       INSERT INTO Comision (idAgente, idFactura, idContrato, montoComision, porcentajeComision)
@@ -424,12 +419,12 @@ BEGIN
     END
     ELSE  -- ALQUILER
     BEGIN
-      -- Ver cuántas facturas pagadas hay
+      -- Ver cuÃ¡ntas facturas pagadas hay
       SELECT @facturasPagadas = COUNT(*)
       FROM Factura
       WHERE idContrato = @idContrato AND estadoPago = 1;
 
-      -- Solo la primera factura genera comisión
+      -- Solo la primera factura genera comisiÃ³n
       IF @facturasPagadas = 1
       BEGIN
         SET @montoComision = ROUND(@montoTotalContrato * (@porcentajeComision / 100.0), 2);
@@ -448,7 +443,7 @@ BEGIN
     FROM Factura
     WHERE idContrato = @idContrato AND estadoPago = 1;
 
-    /* ===== Lógica de estados de contrato y propiedad ===== */
+    /* ===== LÃ³gica de estados de contrato y propiedad ===== */
     IF @idTipoContrato = 1  -- VENTA
     BEGIN
       UPDATE Contrato
@@ -469,7 +464,7 @@ BEGIN
         WHERE idContrato = @idContrato;
       END
 
-      -- Si ya pagó todo el contrato => finaliza y libera propiedad
+      -- Si ya pagÃ³ todo el contrato => finaliza y libera propiedad
       SELECT @totalPagado = ISNULL(SUM(CAST(montoPagado AS DECIMAL(18,2))), 0)
       FROM Factura
       WHERE idContrato = @idContrato AND estadoPago = 1;
@@ -535,12 +530,12 @@ BEGIN
   WHERE 
     LOWER(tr.nombre) IN ('comprador', 'inquilino')
     AND (
-      -- Contratos de venta: aún sin factura
+      -- Contratos de venta: aÃºn sin factura
       (LOWER(tc.nombre) = 'venta' AND NOT EXISTS (
           SELECT 1 FROM Factura f WHERE f.idContrato = c.idContrato
       ))
       OR
-      -- Contratos de alquiler: aún no completaron los pagos
+      -- Contratos de alquiler: aÃºn no completaron los pagos
       (LOWER(tc.nombre) = 'alquiler' AND 
           (SELECT COUNT(*) FROM Factura f WHERE f.idContrato = c.idContrato) < c.cantidadPagos)
     );
