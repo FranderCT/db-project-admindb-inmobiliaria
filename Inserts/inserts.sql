@@ -1,67 +1,11 @@
--- =====================================================
--- SCRIPT DE INSERTS USANDO STORED PROCEDURES
--- BD ALTOSDELVALLE - Usando SPs para garantizar validaciones
--- =====================================================
 
 USE AltosDelValle;
 GO
 
-PRINT '========================================';
-PRINT 'INICIANDO CARGA DE DATOS CON SPs';
-PRINT '========================================';
-GO
 
--- =====================================================
--- PASO 1: LIMPIAR DATOS EXISTENTES (en orden inverso a FKs)
--- =====================================================
-PRINT 'Paso 1/11: Limpiando datos existentes...';
-GO
 
--- Tablas dependientes primero
-DELETE FROM Comision;
-DELETE FROM FacturaCliente;
-DELETE FROM Factura;
-DELETE FROM ContratoTerminos;
-DELETE FROM ClienteContrato;
-DELETE FROM Contrato;
-DELETE FROM Propiedad;
-DELETE FROM Cliente;
-DELETE FROM Agente;
 
--- Tablas maestras
-DELETE FROM TerminosCondiciones;
-DELETE FROM TipoContrato;
-DELETE FROM TipoRol;
-DELETE FROM TipoInmueble;
-DELETE FROM EstadoPropiedad;
-GO
 
-PRINT 'Paso 1/11: Datos limpiados exitosamente.';
-GO
-
--- =====================================================
--- PASO 2: REINICIAR IDENTITIES
--- =====================================================
-PRINT 'Paso 2/11: Reiniciando identities...';
-GO
-
-DBCC CHECKIDENT ('TipoRol', RESEED, 0);
-DBCC CHECKIDENT ('TipoContrato', RESEED, 0);
-DBCC CHECKIDENT ('TerminosCondiciones', RESEED, 0);
-DBCC CHECKIDENT ('EstadoPropiedad', RESEED, 0);
-DBCC CHECKIDENT ('TipoInmueble', RESEED, 0);
-DBCC CHECKIDENT ('ClienteContrato', RESEED, 0);
-DBCC CHECKIDENT ('ContratoTerminos', RESEED, 0);
-DBCC CHECKIDENT ('FacturaCliente', RESEED, 0);
-DBCC CHECKIDENT ('Comision', RESEED, 0);
-GO
-
-PRINT 'Paso 2/11: Identities reiniciados.';
-GO
-
--- =====================================================
--- PASO 3: INSERTAR DATOS MAESTROS (con SPs donde existan)
--- =====================================================
 PRINT 'Paso 3/11: Insertando datos maestros...';
 GO
 

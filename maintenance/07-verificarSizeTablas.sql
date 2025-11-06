@@ -3,7 +3,7 @@ GO
 
 SELECT 
     t.NAME AS TableName,
-    SUM(p.row_count) AS RowCounts,  -- Corregido: usando p.row_count en lugar de p.rows
+    SUM(p.row_count) AS RowCounts,  
     SUM(a.total_pages) * 8 AS TotalSpaceKB,
     SUM(a.used_pages) * 8 AS UsedSpaceKB,
     (SUM(a.total_pages) - SUM(a.used_pages)) * 8 AS UnusedSpaceKB
